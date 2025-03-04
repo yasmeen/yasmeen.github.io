@@ -27,7 +27,8 @@
 	src="https://code.jquery.com/jquery-3.1.1.min.js"
 	integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
 	crossorigin="anonymous"></script>
-	<script src="semantic/dist/semantic.min.js"></script>
+	<script src="/semantic/dist/semantic.min.js"></script>
+	<script src="/static/js/shared-components.js"></script>
 
 	<!-- Global site tag (gtag.js) - Google Analytics -->
 	<script async src="https://www.googletagmanager.com/gtag/js?id=UA-73710322-1"></script>
@@ -40,7 +41,7 @@
 	</script>
 
 	<!-- CSS -->
-	<link rel="stylesheet" type="text/css" href="semantic/dist/semantic.min.css">
+	<link rel="stylesheet" type="text/css" href="/semantic/dist/semantic.min.css">
 	<!-- Emojis -->
 	<!-- Android style -->
 	<!-- <link href="https://afeld.github.io/emoji-css/emoji.css" rel="stylesheet"> -->
@@ -48,44 +49,16 @@
 	<link rel='stylesheet' href='https://unpkg.com/emoji.css/dist/emoji.min.css'>
 
 	<!-- Favicon -->
-	<link rel="shortcut icon" type="image/x-icon" href="static/img/verified.ico"/>
+	<link rel="shortcut icon" type="image/x-icon" href="/static/img/verified.ico"/>
 
-	<link rel='stylesheet' href='static/css/style.css'>
+	<link rel='stylesheet' href='/static/css/style.css'>
 </head>
 <body>
 
 	<div class="ui main text container grid">
 
-		<div class="ten wide column">
-			<a class="myName" href="https://yasmeen.github.io"><h1>Hi, I'm Yasmeen!</h1></a>
-			<br>
-			<p>
-				I'm a hackathon-obsessed software engineer exploring fun & futuristic ideas. I previously worked at <a class="hookxyz workLink" href="https://hook.xyz">Hook</a>, <a class="oscar workLink" href="https://www.hioscar.com/">Oscar Health</a>, <a class="nasa workLink" href="https://www.goldmansachs.com/">GS</a>, <a class="celo workLink" href="https://celo.org">Celo</a>, <a class="tinder workLink" href="https://tinder.com">Tinder</a>,
-				<a class="snapchat workLink" href="https://snapchat.com">Snapchat</a>, and <a class="nasa workLink" href="https://nasa.gov">NASA</a>.
-			</p>
-			<br>
-			<p>
-				<span class='ec ec-round-pushpin'></span> New York, NY
-				<br>
-				<span class="ec ec-telephone-receiver"></span><a class="underlined" href="https://cal.com/yasmeen-roumie/30min"> Let's chat! </a>
-			</p>
-			<br>
-			<a href="http://bit.ly/yasmeen-github"><i class="github icon"></i></a>
-			<a href="http://bit.ly/yasmeen-linkedin"><i class="linkedin icon"></i></a>
-			<a href="mailto:yasmeen.roumie@gmail.com"><i class="mail icon"></i></a>
-		</div>
-		<div class="six wide column">
-			<img src="static/img/hey_bitmoji.png" style="visibility: visible; max-width: 100%; width:200px;">
-		</div>
-
-		<div class="sixteen wide column">
-			<div class="ui stackable three item menu">
-
-			  <a class="item active" href="index">Work</a>
-			  <a class="item" href="projects">Projects</a>
-			  <a class="item" href="about">About</a>
-			</div>
-		</div>
+		<div id="shared-header-placeholder"></div>
+		<div id="shared-nav-placeholder"></div>
 
 		<div class="sixteen wide column work">
 
@@ -256,14 +229,7 @@
 
 			</div>
 		</div>
-		<div class="eight wide column">
-		</div>
-		<div class="sixteen wide column">
-			<center>
-				Made with <span class='ec ec-sparkling-heart '></span>
-				<br>
-				ⓒ <a href="https://github.com/yasmeen">YR</a> 2024
-			</center>
-		</div>
+		
+		<div id="shared-footer-placeholder"></div>
 	</div>
 </body>
