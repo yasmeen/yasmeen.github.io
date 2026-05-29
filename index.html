@@ -1,18 +1,17 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-	<title>Yasmeen Roumie</title>
-	<!-- HTML Meta Tags -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Yasmeen Roumie | Work</title>
 	<meta name="description" content="Yasmeen's work experience">
 
-	<!-- Facebook Meta Tags -->
+	<!-- Open Graph -->
 	<meta property="og:url" content="https://yasmeenroumie.com">
 	<meta property="og:type" content="website">
 	<meta property="og:title" content="Yasmeen Roumie | Work">
 	<meta property="og:description" content="Yasmeen's work experience">
 	<meta property="og:image" content="https://i.pinimg.com/564x/a7/92/e4/a792e42b54c8fdf1e5c02436680e0463.jpg">
-
-	<!-- Twitter Meta Tags -->
 	<meta name="twitter:card" content="summary_large_image">
 	<meta property="twitter:domain" content="yasmeenroumie.com">
 	<meta property="twitter:url" content="https://yasmeenroumie.com">
@@ -20,250 +19,181 @@
 	<meta name="twitter:description" content="Yasmeen's work experience">
 	<meta name="twitter:image" content="https://i.pinimg.com/564x/a7/92/e4/a792e42b54c8fdf1e5c02436680e0463.jpg">
 
-	<!-- Meta Tags Generated via https://www.opengraph.xyz -->
+	<link rel="shortcut icon" type="image/x-icon" href="static/img/verified.ico"/>
+	<link rel="stylesheet" href="static/css/style.css">
 
-	<!-- JS -->
-	<script
-	src="https://code.jquery.com/jquery-3.1.1.min.js"
-	integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
-	crossorigin="anonymous"></script>
-	<script src="semantic/dist/semantic.min.js"></script>
-
-	<!-- Global site tag (gtag.js) - Google Analytics -->
+	<!-- Google Analytics -->
 	<script async src="https://www.googletagmanager.com/gtag/js?id=UA-73710322-1"></script>
 	<script>
-	  window.dataLayer = window.dataLayer || [];
-	  function gtag(){dataLayer.push(arguments);}
-	  gtag('js', new Date());
-
-	  gtag('config', 'UA-73710322-1');
+		window.dataLayer = window.dataLayer || [];
+		function gtag(){dataLayer.push(arguments);}
+		gtag('js', new Date());
+		gtag('config', 'UA-73710322-1');
 	</script>
-
-	<!-- CSS -->
-	<link rel="stylesheet" type="text/css" href="semantic/dist/semantic.min.css">
-	<!-- Emojis -->
-	<!-- Android style -->
-	<!-- <link href="https://afeld.github.io/emoji-css/emoji.css" rel="stylesheet"> -->
-	<!-- Apple style -->
-	<link rel='stylesheet' href='https://unpkg.com/emoji.css/dist/emoji.min.css'>
-
-	<!-- Favicon -->
-	<link rel="shortcut icon" type="image/x-icon" href="static/img/verified.ico"/>
-
-	<link rel='stylesheet' href='static/css/style.css'>
 </head>
 <body>
 
-	<div class="ui main text container grid">
-
-		<div class="ten wide column">
-			<a class="myName" href="https://yasmeen.github.io"><h1>Hi, I'm Yasmeen!</h1></a>
-			<br>
-			<p>
-				I'm a hackathon-obsessed software engineer exploring fun & futuristic ideas. I previously worked at <a class="hookxyz workLink" href="https://hook.xyz">Hook</a>, <a class="oscar workLink" href="https://www.hioscar.com/">Oscar Health</a>, <a class="nasa workLink" href="https://www.goldmansachs.com/">GS</a>, <a class="celo workLink" href="https://celo.org">Celo</a>, <a class="tinder workLink" href="https://tinder.com">Tinder</a>,
-				<a class="snapchat workLink" href="https://snapchat.com">Snapchat</a>, and <a class="nasa workLink" href="https://nasa.gov">NASA</a>.
-			</p>
-			<br>
-			<p>
-				<span class='ec ec-round-pushpin'></span> New York, NY
-				<br>
-				<span class="ec ec-telephone-receiver"></span><a class="underlined" href="https://cal.com/yasmeen-roumie/30min"> Let's chat! </a>
-			</p>
-			<br>
-			<a href="http://bit.ly/yasmeen-github"><i class="github icon"></i></a>
-			<a href="http://bit.ly/yasmeen-linkedin"><i class="linkedin icon"></i></a>
-			<a href="mailto:yasmeen.roumie@gmail.com"><i class="mail icon"></i></a>
-		</div>
-		<div class="six wide column">
-			<img src="static/img/hey_bitmoji.png" style="visibility: visible; max-width: 100%; width:200px;">
-		</div>
-
-		<div class="sixteen wide column">
-			<div class="ui stackable three item menu">
-
-			  <a class="item active" href="index">Work</a>
-			  <a class="item" href="projects">Projects</a>
-			  <a class="item" href="about">About</a>
+	<!-- NAV -->
+	<nav class="nav">
+		<div class="nav-inner">
+			<a class="brand" href="index.html">
+				<span class="dot"></span>
+				<span class="full">Yasmeen Roumie</span>
+			</a>
+			<div class="nav-links">
+				<a class="active" href="index.html">Work</a>
+				<a href="projects.html">Projects</a>
+				<a href="about.html">About</a>
 			</div>
 		</div>
+	</nav>
 
-		<div class="sixteen wide column work">
-
-			<!-- WORK -->
-			<div class="ui very relaxed items">
-
-				<!-- Hook -->
-				
-				<div class="item">
-					<div class="content">
-						<a class="header underlined" href="https://www.hook.xyz/">Hook</a>
-						<div class="meta">
-							<span class="cinema">2022 - 2023</span>
-							<span class='ec'>🪝</span>
-						</div>
-						<div class="description">
-							<p>
-								NFT Options Protocol.
-							</p>
-						</div>
+	<!-- HERO -->
+	<header class="hero">
+		<div class="wrap">
+			<div class="hero-grid">
+				<div>
+					<h1>Hi, I'm Yasmeen! <span class="wave">👋</span></h1>
+					<p>
+						I'm a hackathon-obsessed software engineer exploring fun &amp; futuristic ideas. I previously worked at
+						<a class="workLink hookxyz" href="https://hook.xyz">Hook</a>,
+						<a class="workLink oscar" href="https://www.hioscar.com/">Oscar Health</a>,
+						<a class="workLink gs" href="https://www.goldmansachs.com/">GS</a>,
+						<a class="workLink celo" href="https://celo.org">Celo</a>,
+						<a class="workLink tinder" href="https://tinder.com">Tinder</a>,
+						<a class="workLink snapchat" href="https://snapchat.com">Snapchat</a>, and
+						<a class="workLink nasa" href="https://nasa.gov">NASA</a>.
+					</p>
+					<p class="meta">
+						📍 New York, NY<br>
+						📞
+						<a class="link" href="https://cal.com/yasmeen-roumie/30min">Let's chat!</a>
+					</p>
+					<div class="socials">
+						<a href="http://bit.ly/yasmeen-github" aria-label="GitHub" title="GitHub">
+							<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0C18 4.7 19 5 19 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+						</a>
+						<a href="http://bit.ly/yasmeen-linkedin" aria-label="LinkedIn" title="LinkedIn">
+							<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.4 20.4h-3.6v-5.6c0-1.3 0-3-1.9-3s-2.1 1.4-2.1 2.9v5.7H9.3V9h3.4v1.6h.1c.5-.9 1.7-1.9 3.4-1.9 3.6 0 4.3 2.4 4.3 5.5v6.2zM5.3 7.4a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2zM7.1 20.4H3.5V9h3.6v11.4zM22.2 0H1.8C.8 0 0 .8 0 1.7v20.6c0 .9.8 1.7 1.8 1.7h20.4c1 0 1.8-.8 1.8-1.7V1.7c0-.9-.8-1.7-1.8-1.7z"/></svg>
+						</a>
+						<a href="mailto:yasmeen.roumie@gmail.com" aria-label="Email" title="Email">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+						</a>
 					</div>
 				</div>
-
-				<!-- Oscar -->
-				
-				<div class="item">
-					<div class="content">
-						<a class="header underlined" href="https://www.hioscar.com/">Oscar Health</a>
-						<div class="meta">
-							<span class="cinema">Summer 2020 • 2021 - 2022</span>
-							<span class='ec ec-large-blue-circle'></span>
-						</div>
-						<div class="description">
-							<p>
-								<b>Claims Engineering Team</b>
-								<br>
-								Wrote software to process health insurance claims.
-							</p>
-						</div>
-					</div>
+				<div class="avatar">
+					<img src="static/img/hey_bitmoji.png" alt="Yasmeen bitmoji waving">
 				</div>
-
-				<!-- Goldman Sachs -->
-
-				<div class="item">
-					<div class="content">
-						<a class="header underlined" href="https://www.goldmansachs.com/">Goldman Sachs</a>
-						<div class="meta">
-							<span class="cinema">Jun 2019 - Aug 2019</span>
-							<span class='ec ec-chart-with-upwards-trend'></span>
-						</div>
-						<div class="description">
-							<p>
-								<b>Marquee Content Team</b>
-								<br>
-								Used natural language processing and multi-label supervised learning classification techniques to automatically assign appropriate asset classes to financial articles. Deployed model to auto-tag articles on client-facing content platform.
-							</p>
-						</div>
-						<div class="extra">
-							<div class="ui label"><i class="desktop icon"></i>Machine Learning</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- Celo -->
-				<div class="item">
-					<div class="content">
-						<a class="header underlined" href="https://celo.org/">Celo</a>
-						<div class="meta">
-							<span class="cinema">Jan 2019 - Apr 2019</span>
-							<span class='ec ec-iphone'></span>
-						</div>
-						<div class="description">
-							<p>
-								Implemented a <a class="underlined" href="https://www.investopedia.com/terms/t/tobin-tax.asp">Tobin Tax</a> in the open-source Celo blockchain. View my code on <a class="underlined" href="https://github.com/celo-org/celo-blockchain/commits?author=yasmeen">GitHub</a>! 
-							</p>
-						</div>
-
-						<div class="extra">
-							<div class="ui label"><i class="money bill alternate outline icon"></i>Cryptocurrency</div>
-							<div class="ui label"><i class="connectdevelop icon"></i>Blockchain</div>
-							<div class="ui label"><i class="heart icon"></i>Open Source</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- Tinder -->
-				<div class="item">
-					<div class="content">
-						<a class="header underlined" href="https://tinder.com/">Tinder</a>
-						<div class="meta">
-							<span class="cinema">Jun 2018 - Aug 2018</span>
-							<span class='ec ec-fire '></span>
-						</div>
-						<div class="description">
-							<p>
-								<b>Tinder Science</b>
-								<br>
-								Worked on natural language processing and predictive topic modeling with k-means clustering for Tinder messages using weighted word embeddings.
-							</p>
-						</div>
-
-						<div class="extra">
-							<div class="ui label"><i class="desktop icon"></i>Machine Learning</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- Snapchat -->
-				<div class="item">
-					<div class="content">
-						<a class="header underlined" href="https://snapchat.com/">Snapchat</a>
-						<div class="meta">
-							<span class="award">May 2017 - Aug 2017</span>
-							<span class='ec ec-ghost '></span>
-						</div>
-						<div class="description">
-							<p>
-								<b>Camera Platform</b>
-								<br>
-								Prototyped augmented reality lenses implementing <b><a class="underlined" href="https://lensstudio.snapchat.com/templates/object/hand/">hand</a></b> and <b><a class="underlined" href="https://lensstudio.snapchat.com/templates/object/body/">body</a></b> tracking technology using <b><a class="underlined" href="https://lensstudio.snapchat.com/">Lens Studio</a></b> and created public resources and documentation for developer use. Worked alongside computer vision researchers to create mixed-reality experiences using machine learning-based tracking for objects in 3D space.
-							</p>
-						</div>
-
-						<div class="extra">
-							<div class="ui label"><i class="eye icon"></i>Augmented Reality</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- NASA 2 -->
-				<div class="item">
-					<div class="content">
-						<a class="header underlined" href="https://nasa.gov/">NASA</a>
-						<div class="meta">
-							<span class="cinema">Jun 2016 - Aug 2016</span>
-							<span class='ec ec-rocket '></span>
-						</div>
-
-						<div class="description">
-							<p>
-								Developed interactive augmented reality experiences for Microsoft HoloLens on the Launch Vehicle Integration Team that allowed viewing and tracking simulated spacecraft launches in 3D. Created mixed reality replicas of future spacecraft to virtually explore and reduce costs. Gave a talk on rapid prototype development to over 300 people at Unity developer conference.
-							</p>
-						</div>
-
-						<div class="extra">
-							<div class="ui label"><i class="eye icon"></i>Augmented Reality</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- NASA 1 -->
-				<div class="item">
-					<div class="content">
-						<!-- <a class="header" href="https://nasa.gov/">NASA</a> -->
-						<div class="meta">
-							<span class="cinema">Jun 2015 - Aug 2015</span>
-							<span class='ec ec-rocket '></span>
-						</div>
-
-						<div class="description">
-							<p>
-								Developed Confluence organization platform for the systems/integration engineering team's upcoming mission launches. Published paper called <a href="https://doi.org/10.1002/j.2334-5837.2016.00236.x">A Process for Capturing the Art of Systems Engineering</a>.
-							</p>
-						</div>
-					</div>
-				</div>
-
 			</div>
 		</div>
-		<div class="eight wide column">
-		</div>
-		<div class="sixteen wide column">
-			<center>
-				Made with <span class='ec ec-sparkling-heart '></span>
-				<br>
-				ⓒ <a href="https://github.com/yasmeen">YR</a> 2024
-			</center>
-		</div>
-	</div>
+	</header>
+
+	<!-- CONTENT -->
+	<main class="wrap">
+		<nav class="tabs">
+			<a class="active" href="index.html">Work</a>
+			<a href="projects.html">Projects</a>
+			<a href="about.html">About</a>
+		</nav>
+
+		<section class="list">
+
+			<!-- Hook -->
+			<article class="card bar-coral">
+				<div class="card-head">
+					<a class="card-title" href="https://www.hook.xyz/">Hook</a>
+					<span class="card-emoji">🪝</span>
+					<span class="card-date">2022 – 2023</span>
+				</div>
+				<p class="card-desc">NFT Options Protocol.</p>
+			</article>
+
+			<!-- Oscar -->
+			<article class="card bar-blue">
+				<div class="card-head">
+					<a class="card-title" href="https://www.hioscar.com/">Oscar Health</a>
+					<span class="card-emoji">🔵</span>
+					<span class="card-date">Summer 2020 · 2021 – 2022</span>
+				</div>
+				<p class="card-desc"><span class="card-role">Claims Engineering Team.</span> Wrote software to process health insurance claims.</p>
+			</article>
+
+			<!-- Goldman Sachs -->
+			<article class="card bar-blue">
+				<div class="card-head">
+					<a class="card-title" href="https://www.goldmansachs.com/">Goldman Sachs</a>
+					<span class="card-emoji">📈</span>
+					<span class="card-date">Jun 2019 – Aug 2019</span>
+				</div>
+				<p class="card-desc"><span class="card-role">Marquee Content Team.</span> Used natural language processing and multi-label supervised learning classification to automatically assign asset classes to financial articles. Deployed the model to auto-tag articles on a client-facing content platform.</p>
+				<div class="tags"><span class="tag ml">Machine Learning</span></div>
+			</article>
+
+			<!-- Celo -->
+			<article class="card bar-mint">
+				<div class="card-head">
+					<a class="card-title" href="https://celo.org/">Celo</a>
+					<span class="card-emoji">📱</span>
+					<span class="card-date">Jan 2019 – Apr 2019</span>
+				</div>
+				<p class="card-desc">Implemented a <a class="link" href="https://www.investopedia.com/terms/t/tobin-tax.asp">Tobin Tax</a> in the open-source Celo blockchain. View my code on <a class="link" href="https://github.com/celo-org/celo-blockchain/commits?author=yasmeen">GitHub</a>!</p>
+				<div class="tags">
+					<span class="tag web3">Cryptocurrency</span>
+					<span class="tag web3">Blockchain</span>
+					<span class="tag mint">Open Source</span>
+				</div>
+			</article>
+
+			<!-- Tinder -->
+			<article class="card bar-pink">
+				<div class="card-head">
+					<a class="card-title" href="https://tinder.com/">Tinder</a>
+					<span class="card-emoji">🔥</span>
+					<span class="card-date">Jun 2018 – Aug 2018</span>
+				</div>
+				<p class="card-desc"><span class="card-role">Tinder Science.</span> Worked on natural language processing and predictive topic modeling with k-means clustering for Tinder messages using weighted word embeddings.</p>
+				<div class="tags"><span class="tag ml">Machine Learning</span></div>
+			</article>
+
+			<!-- Snapchat -->
+			<article class="card bar-yellow">
+				<div class="card-head">
+					<a class="card-title" href="https://snapchat.com/">Snapchat</a>
+					<span class="card-emoji">👻</span>
+					<span class="card-date">May 2017 – Aug 2017</span>
+				</div>
+				<p class="card-desc"><span class="card-role">Camera Platform.</span> Prototyped augmented reality lenses with <a class="link" href="https://lensstudio.snapchat.com/templates/object/hand/">hand</a> and <a class="link" href="https://lensstudio.snapchat.com/templates/object/body/">body</a> tracking using <a class="link" href="https://lensstudio.snapchat.com/">Lens Studio</a>, and built public resources and docs for developers. Worked with computer vision researchers on mixed-reality experiences using ML-based 3D object tracking.</p>
+				<div class="tags"><span class="tag ar">Augmented Reality</span></div>
+			</article>
+
+			<!-- NASA 2 -->
+			<article class="card bar-purple">
+				<div class="card-head">
+					<a class="card-title" href="https://nasa.gov/">NASA</a>
+					<span class="card-emoji">🚀</span>
+					<span class="card-date">Jun 2016 – Aug 2016</span>
+				</div>
+				<p class="card-desc">Built interactive AR experiences for Microsoft HoloLens on the Launch Vehicle Integration Team for viewing and tracking simulated spacecraft launches in 3D. Created mixed-reality replicas of future spacecraft to virtually explore and reduce costs. Gave a talk on rapid prototype development to 300+ people at the Unity developer conference.</p>
+				<div class="tags"><span class="tag ar">Augmented Reality</span></div>
+			</article>
+
+			<!-- NASA 1 -->
+			<article class="card bar-purple">
+				<div class="card-head">
+					<a class="card-title" href="https://nasa.gov/">NASA</a>
+					<span class="card-emoji">🚀</span>
+					<span class="card-date">Jun 2015 – Aug 2015</span>
+				</div>
+				<p class="card-desc">Developed a Confluence organization platform for the systems/integration engineering team's upcoming mission launches. Published a paper, <a class="link" href="https://doi.org/10.1002/j.2334-5837.2016.00236.x">A Process for Capturing the Art of Systems Engineering</a>.</p>
+			</article>
+
+		</section>
+	</main>
+
+	<footer class="footer">
+		Made with 💖<br>
+		© <a href="https://github.com/yasmeen">YR</a> 2026
+	</footer>
+
 </body>
+</html>

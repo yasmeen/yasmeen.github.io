@@ -1,18 +1,17 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-	<title>Yasmeen Roumie | Projects</title>
-	<!-- HTML Meta Tags -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Yasmeen Roumie | Projects</title>
 	<meta name="description" content="Yasmeen's projects">
 
-	<!-- Facebook Meta Tags -->
+	<!-- Open Graph -->
 	<meta property="og:url" content="https://yasmeenroumie.com/projects.html">
 	<meta property="og:type" content="website">
 	<meta property="og:title" content="Yasmeen Roumie | Projects">
 	<meta property="og:description" content="Yasmeen's projects">
 	<meta property="og:image" content="https://i.pinimg.com/564x/76/94/07/769407bae193502d4bb33bf4c83ce177.jpg">
-
-	<!-- Twitter Meta Tags -->
 	<meta name="twitter:card" content="summary_large_image">
 	<meta property="twitter:domain" content="yasmeenroumie.com">
 	<meta property="twitter:url" content="https://yasmeenroumie.com/projects.html">
@@ -20,222 +19,168 @@
 	<meta name="twitter:description" content="Yasmeen's projects">
 	<meta name="twitter:image" content="https://i.pinimg.com/564x/76/94/07/769407bae193502d4bb33bf4c83ce177.jpg">
 
-	<!-- Meta Tags Generated via https://www.opengraph.xyz -->
+	<link rel="shortcut icon" type="image/x-icon" href="static/img/verified.ico"/>
+	<link rel="stylesheet" href="static/css/style.css">
 
-	<!-- JS -->
-	<script
-	src="https://code.jquery.com/jquery-3.1.1.min.js"
-	integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
-	crossorigin="anonymous"></script>
-	<script src="semantic/dist/semantic.min.js"></script>
-
-	<!-- Global site tag (gtag.js) - Google Analytics -->
+	<!-- Google Analytics -->
 	<script async src="https://www.googletagmanager.com/gtag/js?id=UA-73710322-1"></script>
 	<script>
-	  window.dataLayer = window.dataLayer || [];
-	  function gtag(){dataLayer.push(arguments);}
-	  gtag('js', new Date());
-
-	  gtag('config', 'UA-73710322-1');
+		window.dataLayer = window.dataLayer || [];
+		function gtag(){dataLayer.push(arguments);}
+		gtag('js', new Date());
+		gtag('config', 'UA-73710322-1');
 	</script>
-
-	<!-- CSS -->
-	<link rel="stylesheet" type="text/css" href="semantic/dist/semantic.min.css">
-	<!-- Emojis -->
-	<!-- Android style -->
-	<!-- <link href="https://afeld.github.io/emoji-css/emoji.css" rel="stylesheet"> -->
-	<!-- Apple style -->
-	<link rel='stylesheet' href='https://unpkg.com/emoji.css/dist/emoji.min.css'>
-
-	<!-- Favicon -->
-	<link rel="shortcut icon" type="image/x-icon" href="static/img/verified.ico"/>
-
-	<link rel='stylesheet' href='static/css/style.css'>
-
 </head>
 <body>
 
-	<div class="ui main text container grid">
-
-		<div class="ten wide column">
-			<a class="myName" href="https://yasmeen.github.io"><h1>Hi, I'm Yasmeen!</h1></a>
-			<br>
-			<p>
-				I'm a hackathon-obsessed software engineer exploring fun & futuristic ideas. I previously worked at <a class="hookxyz workLink" href="https://hook.xyz">Hook</a>, <a class="oscar workLink" href="https://www.hioscar.com/">Oscar Health</a>, <a class="nasa workLink" href="https://www.goldmansachs.com/">GS</a>, <a class="celo workLink" href="https://celo.org">Celo</a>, <a class="tinder workLink" href="https://tinder.com">Tinder</a>,
-				<a class="snapchat workLink" href="https://snapchat.com">Snapchat</a>, and <a class="nasa workLink" href="https://nasa.gov">NASA</a>.
-			</p>
-			<br>
-			<p>
-				<span class='ec ec-round-pushpin'></span> New York, NY
-				<br>
-				<span class="ec ec-telephone-receiver"></span><a class="underlined" href="https://cal.com/yasmeen-roumie/30min"> Let's chat! </a>
-			</p>
-			<br>
-			<a href="https://bit.ly/yasmeen-github"><i class="github icon"></i></a>
-			<a href="https://bit.ly/yasmeen-linkedin"><i class="linkedin icon"></i></a>
-			<a href="mailto:yasmeen.roumie@gmail.com"><i class="mail icon"></i></a>
-		</div>
-		<div class="six wide column">
-			<img src="static/img/hey_bitmoji.png" style="visibility: visible; max-width: 100%; width:200px;">
-		</div>
-
-		<div class="sixteen wide column">
-			<div class="ui stackable three item menu">
-
-			  <a class="item" href="index">Work</a>
-			  <a class="item active" href="projects">Projects</a>
-			  <a class="item" href="about">About</a>
+	<!-- NAV -->
+	<nav class="nav">
+		<div class="nav-inner">
+			<a class="brand" href="index.html">
+				<span class="dot"></span>
+				<span class="full">Yasmeen Roumie</span>
+			</a>
+			<div class="nav-links">
+				<a href="index.html">Work</a>
+				<a class="active" href="projects.html">Projects</a>
+				<a href="about.html">About</a>
 			</div>
 		</div>
+	</nav>
 
-		<div class="sixteen wide column projects">
-
-			<!-- PROJECTS -->
-			<div class="ui very relaxed items">
-				<!-- NYC Run Clubs -->
-				<div class="item">
-					<div class="content">
-						<a class="header underlined" href="https://nycrunclubs.com">NYC Run Clubs</a>
-						<div class="meta">
-							<span class="cinema">2023 - now</span>
-						</div>
-						<div class="description">
-							<p>The go-to information hub for the NYC running community.</p>
-						</div>
-						<!-- <div class="extra">
-							<div class="ui label"><i class="compass outline icon"></i>Web3</div>
-						</div> -->
+	<!-- HERO -->
+	<header class="hero">
+		<div class="wrap">
+			<div class="hero-grid">
+				<div>
+					<h1>Hi, I'm Yasmeen! <span class="wave">👋</span></h1>
+					<p>
+						I'm a hackathon-obsessed software engineer exploring fun &amp; futuristic ideas. I previously worked at
+						<a class="workLink hookxyz" href="https://hook.xyz">Hook</a>,
+						<a class="workLink oscar" href="https://www.hioscar.com/">Oscar Health</a>,
+						<a class="workLink gs" href="https://www.goldmansachs.com/">GS</a>,
+						<a class="workLink celo" href="https://celo.org">Celo</a>,
+						<a class="workLink tinder" href="https://tinder.com">Tinder</a>,
+						<a class="workLink snapchat" href="https://snapchat.com">Snapchat</a>, and
+						<a class="workLink nasa" href="https://nasa.gov">NASA</a>.
+					</p>
+					<p class="meta">
+						📍 New York, NY<br>
+						📞
+						<a class="link" href="https://cal.com/yasmeen-roumie/30min">Let's chat!</a>
+					</p>
+					<div class="socials">
+						<a href="https://bit.ly/yasmeen-github" aria-label="GitHub" title="GitHub">
+							<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.5-3.9-1.5-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0C18 4.7 19 5 19 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5z"/></svg>
+						</a>
+						<a href="https://bit.ly/yasmeen-linkedin" aria-label="LinkedIn" title="LinkedIn">
+							<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.4 20.4h-3.6v-5.6c0-1.3 0-3-1.9-3s-2.1 1.4-2.1 2.9v5.7H9.3V9h3.4v1.6h.1c.5-.9 1.7-1.9 3.4-1.9 3.6 0 4.3 2.4 4.3 5.5v6.2zM5.3 7.4a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2zM7.1 20.4H3.5V9h3.6v11.4zM22.2 0H1.8C.8 0 0 .8 0 1.7v20.6c0 .9.8 1.7 1.8 1.7h20.4c1 0 1.8-.8 1.8-1.7V1.7c0-.9-.8-1.7-1.8-1.7z"/></svg>
+						</a>
+						<a href="mailto:yasmeen.roumie@gmail.com" aria-label="Email" title="Email">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+						</a>
 					</div>
 				</div>
-
-				<!-- Groupon -->
-				<div class="item">
-					<div class="content">
-						<a class="header underlined" href="https://groupon-quantum-coupon.vercel.app/">QuantumCoupon AI</a>
-						<div class="meta">
-							<span class="cinema">Jan 2024 | Groupon Innovators Challenge</span>
-							<span class='ec ec-trophy'></span>
-						</div>
-						<div class="description">
-							<p>AI-powered sales outreach tool for Groupon's sales team. Winner of Groupon's Sales Automation Competition.</p>
-						</div>
-						<div class="extra">
-							<div class="ui label"><i class="magic outline icon"></i>AI</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- Mintaro -->
-				<div class="item">
-					<div class="content">
-						<a class="header underlined" href="https://mintaro.app">Mintaro</a>
-						<div class="meta">
-							<span class="cinema">Spring 2022</span>
-						</div>
-						<div class="description">
-							<p>Crypto payment links using Solana Pay.</p>
-						</div>
-						<div class="extra">
-							<div class="ui label"><i class="compass outline icon"></i>Web3</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- Intern World -->
-				<!-- <div class="item">
-					<div class="content">
-						<a class="header underlined" href="https://intern.world">Intern World</a>
-						<div class="meta">
-							<span class="cinema">2019 - 2020</span>
-						</div>
-						<div class="description">
-							<p></p>
-						</div>
-					</div>
-				</div> -->
-
-
-				<!-- Cram -->
-				<div class="item">
-					<div class="content">
-						<a class="header underlined" href="https://bit.ly/cram-app">Cram</a>
-						<div class="meta">
-							<span class="cinema">Dec 2017 | YHack</span>
-							<span class='ec ec-trophy '></span>
-						</div>
-						<div class="description">
-							<p>
-								Multiplayer trivia app with questions generated based on course lectures/notes.
-							</p>
-						</div>
-					</div>
-				</div>
-
-				<!-- radAR -->
-				<div class="item">
-					<div class="content">
-						<a class="header underlined" href="https://bit.ly/radAR-app">radAR</a>
-						<div class="meta">
-							<span class="award">Sep 2017 | MHacks X</span>
-							<span class='ec ec-trophy '></span>
-						</div>
-						<div class="description">
-							<p>
-								Augmented reality iOS app for that displays Yelp rating and Facebook check-in info above detected storefronts.
-							</p>
-						</div>
-						<div class="extra">
-							<div class="ui label"><i class="eye icon"></i>Augmented Reality</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- PillAR -->
-				<div class="item">
-					<div class="content">
-						<a class="header underlined" href="https://bit.ly/pill-AR">PillAR</a>
-						<div class="meta">
-							<span class="cinema">Sep 2017 | PennApps XVI</span>
-							<span class='ec ec-trophy '></span>
-						</div>
-						<div class="description">
-							<p>
-								Augmented reality iOS app that uses computer vision to identify text on pill bottles and track medication usage.
-							</p>
-						</div>
-						<div class="extra">
-							<div class="ui label"><i class="eye icon"></i>Augmented Reality</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- Fizz Filter -->
-				<div class="item">
-					<div class="content">
-						<a class="header underlined" href="https://bit.ly/fizz-filter">Fizz Filter</a>
-						<div class="meta">
-							<span class="cinema">Oct 2016 | Reality Virtually Hackathon</span>
-						</div>
-						<div class="description">
-							<p>
-								Mixed reality HoloLens app that allows users to scan a room and virtually apply a theme to the walls and furniture.
-							</p>
-						</div>
-						<div class="extra">
-							<div class="ui label"><i class="eye icon"></i>Augmented Reality</div>
-						</div>
-					</div>
+				<div class="avatar">
+					<img src="static/img/hey_bitmoji.png" alt="Yasmeen bitmoji waving">
 				</div>
 			</div>
 		</div>
-		<div class="eight wide column">
-		</div>
-		<div class="sixteen wide column">
-			<center>
-				Made with <span class='ec ec-sparkling-heart '></span>
-				<br>
-				ⓒ <a href="https://github.com/yasmeen">YR</a> 2024
-			</center>
-		</div>
-	</div>
+	</header>
+
+	<!-- CONTENT -->
+	<main class="wrap">
+		<nav class="tabs">
+			<a href="index.html">Work</a>
+			<a class="active" href="projects.html">Projects</a>
+			<a href="about.html">About</a>
+		</nav>
+
+		<section class="list">
+
+			<!-- NYC Run Clubs -->
+			<article class="card bar-coral">
+				<div class="card-head">
+					<a class="card-title" href="https://nycrunclubs.com">NYC Run Clubs</a>
+					<span class="card-emoji">🏃‍♀️</span>
+					<span class="card-date">2023 – now</span>
+				</div>
+				<p class="card-desc">The go-to information hub for the NYC running community.</p>
+			</article>
+
+			<!-- QuantumCoupon AI -->
+			<article class="card bar-purple">
+				<div class="card-head">
+					<a class="card-title" href="https://groupon-quantum-coupon.vercel.app/">QuantumCoupon AI</a>
+					<span class="card-emoji">🏆</span>
+					<span class="card-date">Jan 2024 · Groupon Innovators Challenge</span>
+				</div>
+				<p class="card-desc">AI-powered sales outreach tool for Groupon's sales team. Winner of Groupon's Sales Automation Competition.</p>
+				<div class="tags"><span class="tag ai">AI</span><span class="tag win">🏆 Winner</span></div>
+			</article>
+
+			<!-- Mintaro -->
+			<article class="card bar-mint">
+				<div class="card-head">
+					<a class="card-title" href="https://mintaro.app">Mintaro</a>
+					<span class="card-emoji">💸</span>
+					<span class="card-date">Spring 2022</span>
+				</div>
+				<p class="card-desc">Crypto payment links using Solana Pay.</p>
+				<div class="tags"><span class="tag web3">Web3</span></div>
+			</article>
+
+			<!-- Cram -->
+			<article class="card bar-yellow">
+				<div class="card-head">
+					<a class="card-title" href="https://bit.ly/cram-app">Cram</a>
+					<span class="card-emoji">🏆</span>
+					<span class="card-date">Dec 2017 · YHack</span>
+				</div>
+				<p class="card-desc">Multiplayer trivia app with questions generated from course lectures and notes.</p>
+				<div class="tags"><span class="tag win">🏆 Winner</span></div>
+			</article>
+
+			<!-- radAR -->
+			<article class="card bar-sky">
+				<div class="card-head">
+					<a class="card-title" href="https://bit.ly/radAR-app">radAR</a>
+					<span class="card-emoji">🏆</span>
+					<span class="card-date">Sep 2017 · MHacks X</span>
+				</div>
+				<p class="card-desc">Augmented reality iOS app that displays Yelp ratings and Facebook check-in info above detected storefronts.</p>
+				<div class="tags"><span class="tag ar">Augmented Reality</span><span class="tag win">🏆 Winner</span></div>
+			</article>
+
+			<!-- PillAR -->
+			<article class="card bar-sky">
+				<div class="card-head">
+					<a class="card-title" href="https://bit.ly/pill-AR">PillAR</a>
+					<span class="card-emoji">🏆</span>
+					<span class="card-date">Sep 2017 · PennApps XVI</span>
+				</div>
+				<p class="card-desc">Augmented reality iOS app that uses computer vision to identify text on pill bottles and track medication usage.</p>
+				<div class="tags"><span class="tag ar">Augmented Reality</span><span class="tag win">🏆 Winner</span></div>
+			</article>
+
+			<!-- Fizz Filter -->
+			<article class="card bar-pink">
+				<div class="card-head">
+					<a class="card-title" href="https://bit.ly/fizz-filter">Fizz Filter</a>
+					<span class="card-emoji">🪄</span>
+					<span class="card-date">Oct 2016 · Reality Virtually Hackathon</span>
+				</div>
+				<p class="card-desc">Mixed reality HoloLens app that lets users scan a room and virtually apply a theme to the walls and furniture.</p>
+				<div class="tags"><span class="tag ar">Augmented Reality</span></div>
+			</article>
+
+		</section>
+	</main>
+
+	<footer class="footer">
+		Made with 💖<br>
+		© <a href="https://github.com/yasmeen">YR</a> 2026
+	</footer>
+
 </body>
+</html>
