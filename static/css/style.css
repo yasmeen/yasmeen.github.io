@@ -23,6 +23,140 @@ body {
 .main.container {
   margin-top: 7em;
 }
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.avatar {
+  width: 200px;
+}
+
+/* The nav is a plain menu on desktop, so the hamburger stays out of the way. */
+.nav-toggle {
+  display: none;
+}
+
+/* Mobile */
+@media only screen and (max-width: 767px) {
+  .main.container {
+    margin-top: 1.5em;
+  }
+
+  /* Keep the avatar beside the intro text rather than letting `stackable`
+     drop it into a full-width block of its own. */
+  .ui.stackable.grid > .column.intro-text,
+  .ui.stackable.grid > .column.intro-image {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  .ui.stackable.grid > .column.intro-text {
+    width: calc(100% - 100px) !important;
+    padding-right: 0 !important;
+  }
+
+  .ui.stackable.grid > .column.intro-image {
+    width: 100px !important;
+    padding-left: 0 !important;
+  }
+
+  .avatar {
+    width: 92px;
+  }
+
+  .intro-text h1 {
+    font-size: 1.5rem;
+    margin-top: 0;
+    margin-bottom: 0.25rem;
+  }
+
+  /* Spacer line breaks between the intro blocks; paragraph margins are
+     enough on a small screen. The <br> inside the location <p> is kept. */
+  .intro-text > br {
+    display: none;
+  }
+
+  .intro-text > p {
+    margin-bottom: 0.5em;
+  }
+
+  /* `very relaxed` gives every item a 2em top margin, and the first one's
+     collapses out of the list to sit under the nav. */
+  .ui.very.relaxed.items > .item:first-child {
+    margin-top: 0 !important;
+  }
+
+  /* Once collapsed the nav is a corner control, not a row in the page, so
+     lift it out of the grid flow and pin it to the top right. */
+  .ui.main.container.grid {
+    position: relative;
+  }
+
+  /* 0.5rem, not 0, so the glyph's own side bearing lands on the same edge as
+     the avatar and body text rather than against the screen. */
+  .ui.stackable.grid > .column.js-nav.nav-column {
+    position: absolute;
+    top: 0;
+    right: 0.5rem;
+    width: auto !important;
+    padding: 0 !important;
+    z-index: 10;
+  }
+
+  /* Keep the avatar clear of the toggle above it. */
+  .has-js-nav.ui.stackable.grid > .column.intro-image {
+    padding-top: 2.5rem !important;
+  }
+
+  /* `js-nav` is set by nav.js, so with JS off the menu stays visible rather
+     than collapsing behind a button that can never be opened. */
+  .nav-column.js-nav .nav-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    background: none;
+    border: 0;
+    color: #383838;
+    cursor: pointer;
+    font-size: 1.25rem;
+    padding: 0;
+  }
+
+  .nav-column.js-nav .nav-toggle .icon {
+    margin: 0;
+  }
+
+  /* Drops over the page rather than pushing it down. */
+  .nav-column.js-nav .nav-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0.5rem;
+    min-width: 11rem;
+  }
+
+  .nav-column.js-nav.open .nav-menu {
+    display: block;
+  }
+
+  .nav-column.js-nav .nav-menu .ui.menu {
+    margin: 0;
+    box-shadow: 0 2px 8px rgba(34, 36, 38, 0.15);
+  }
+
+  /* `three item` centres its items and zeroes their side padding with
+     !important, which reads oddly in a narrow panel. */
+  .nav-column.js-nav .nav-menu .ui.menu .item {
+    justify-content: flex-start;
+    text-align: left;
+    padding-left: 1.25em !important;
+    padding-right: 1.25em !important;
+  }
+}
 .wireframe {
   margin-top: 2em;
 }

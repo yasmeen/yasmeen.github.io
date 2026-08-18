@@ -1,0 +1,28 @@
+{
+  "name": "yasmeenroumie.com",
+  "version": "1.0.0",
+  "description": "Source for yasmeenroumie.com",
+  "scripts": {
+    "build:icons": "node scripts/build-icons.mjs",
+    "build:css": "tailwindcss -i src/input.css -o static/css/site.css --minify",
+    "build": "npm run build:icons && npm run build:css",
+    "watch": "tailwindcss -i src/input.css -o static/css/site.css --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yasmeen/yasmeen.github.io.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yasmeen/yasmeen.github.io/issues"
+  },
+  "homepage": "https://github.com/yasmeen/yasmeen.github.io#readme",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "tailwindcss": "^4.3.3"
+  },
+  "dependencies": {
+    "@phosphor-icons/core": "^2.1.1",
+    "geist": "^1.7.2"
+  },
+  "private": true
+}
