@@ -1,8 +1,6 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-	<!-- META TAGS -->
-	<!-- HTML Meta Tags -->
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Yasmeen Roumie | About</title>
@@ -23,14 +21,11 @@
 	<meta name="twitter:description" content="Learn more about Yasmeen">
 	<meta name="twitter:image" content="https://i.pinimg.com/564x/0a/84/b9/0a84b95ef55edb773bc398705ed65797.jpg">
 
-	<!-- Meta Tags Generated via https://www.opengraph.xyz -->
+	<link rel="shortcut icon" type="image/x-icon" href="static/img/verified.ico"/>
 
-	<!-- JS -->
-	<script
-	src="https://code.jquery.com/jquery-3.1.1.min.js"
-	integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="
-	crossorigin="anonymous"></script>
-	<script src="semantic/dist/semantic.min.js"></script>
+	<link rel="preload" href="static/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+	<link rel="stylesheet" href="static/css/site.css">
+	<script src="static/js/nav.js" defer></script>
 
 	<!-- Global site tag (gtag.js) - Google Analytics -->
 	<script async src="https://www.googletagmanager.com/gtag/js?id=UA-73710322-1"></script>
@@ -41,106 +36,118 @@
 
 	  gtag('config', 'UA-73710322-1');
 	</script>
-
-	<script type="text/javascript">
-			$(document)
-			  .ready(function() {
-			    $('.polytopia')
-			      .on('click', function() {
-			        $('.mini.modal')
-			          .modal('show')
-		            ;
-
-			      })
-			    ;
-			  })
-			;
-	</script>
-
-	<!-- CSS -->
-	<link rel="stylesheet" type="text/css" href="semantic/dist/semantic.min.css">
-	<!-- Emojis -->
-	<!-- Android style -->
-	<!-- <link href="https://afeld.github.io/emoji-css/emoji.css" rel="stylesheet"> -->
-	<!-- Apple style -->
-	<link rel='stylesheet' href='https://unpkg.com/emoji.css/dist/emoji.min.css'>
-
-	<!-- Favicon -->
-	<link rel="shortcut icon" type="image/x-icon" href="static/img/verified.ico"/>
-
-	<link rel='stylesheet' href='static/css/style.css'>
-
-	<script src="static/js/nav.js" defer></script>
 </head>
-<body>
+<body class="min-h-screen">
 
-	<div class="ui main text container stackable grid">
+<!--SPRITE:START-->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="i-github" viewBox="0 0 256 256"><path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z"/></symbol>
+  <symbol id="i-linkedin" viewBox="0 0 256 256"><path d="M216,24H40A16,16,0,0,0,24,40V216a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V40A16,16,0,0,0,216,24Zm0,192H40V40H216V216ZM96,112v64a8,8,0,0,1-16,0V112a8,8,0,0,1,16,0Zm88,28v36a8,8,0,0,1-16,0V140a20,20,0,0,0-40,0v36a8,8,0,0,1-16,0V112a8,8,0,0,1,15.79-1.78A36,36,0,0,1,184,140ZM100,84A12,12,0,1,1,88,72,12,12,0,0,1,100,84Z"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 256 256"><path d="M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48ZM203.43,64,128,133.15,52.57,64ZM216,192H40V74.19l82.59,75.71a8,8,0,0,0,10.82,0L216,74.19V192Z"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 256 256"><path d="M128,64a40,40,0,1,0,40,40A40,40,0,0,0,128,64Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,128Zm0-112a88.1,88.1,0,0,0-88,88c0,31.4,14.51,64.68,42,96.25a254.19,254.19,0,0,0,41.45,38.3,8,8,0,0,0,9.18,0A254.19,254.19,0,0,0,174,200.25c27.45-31.57,42-64.85,42-96.25A88.1,88.1,0,0,0,128,16Zm0,206c-16.53-13-72-60.75-72-118a72,72,0,0,1,144,0C200,161.23,144.53,209,128,222Z"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 256 256"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM40,72H216a8,8,0,0,0,0-16H40a8,8,0,0,0,0,16ZM216,184H40a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Z"/></symbol>
+  <symbol id="i-close" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 256 256"><path d="M204,64V168a12,12,0,0,1-24,0V93L72.49,200.49a12,12,0,0,1-17-17L163,76H88a12,12,0,0,1,0-24H192A12,12,0,0,1,204,64Z"/></symbol>
+</svg>
+<!--SPRITE:END-->
 
-		<div class="ten wide column intro-text">
-			<a class="myName" href="https://yasmeen.github.io"><h1>Hi, I'm Yasmeen!</h1></a>
-			<br>
-			<p>
-				I'm a hackathon-obsessed software engineer exploring fun & futuristic ideas. I previously worked at <a class="hookxyz workLink" href="https://hook.xyz">Hook</a>, <a class="oscar workLink" href="https://www.hioscar.com/">Oscar Health</a>, <a class="nasa workLink" href="https://www.goldmansachs.com/">GS</a>, <a class="celo workLink" href="https://celo.org">Celo</a>, <a class="tinder workLink" href="https://tinder.com">Tinder</a>,
-				<a class="snapchat workLink" href="https://snapchat.com">Snapchat</a>, and <a class="nasa workLink" href="https://nasa.gov">NASA</a>.
-			</p>
-			<br>
-			<p>
-				<span class='ec ec-round-pushpin'></span> New York, NY
-				<br>
-				<span class="ec ec-telephone-receiver"></span><a class="underlined" href="https://cal.com/yasmeen-roumie/30min"> Let's chat! </a>
-			</p>
-			<br>
-			<a href="http://bit.ly/yasmeen-github"><i class="github icon"></i></a>
-			<a href="http://bit.ly/yasmeen-linkedin"><i class="linkedin icon"></i></a>
-			<a href="mailto:yasmeen.roumie@gmail.com"><i class="mail icon"></i></a>
-		</div>
-		<div class="six wide column intro-image">
-			<img class="avatar" src="static/img/hey_bitmoji.png" alt="Bitmoji of Yasmeen waving">
-		</div>
+<header class="sticky top-0 z-40 border-b border-border bg-bg/80 backdrop-blur-md">
+	<nav class="mx-auto flex h-16 max-w-4xl items-center justify-between gap-4 px-5" aria-label="Main">
+		<a href="index" class="font-mono text-sm font-medium tracking-tight hover:text-accent transition-colors">yasmeen roumie</a>
 
-		<div class="sixteen wide column nav-column">
-			<button class="nav-toggle" type="button" aria-controls="site-menu" aria-expanded="false" aria-label="Menu">
-				<i class="bars icon" aria-hidden="true"></i>
-			</button>
-			<div class="nav-menu" id="site-menu">
-				<div class="ui stackable three item menu">
-
-				  <a class="item" href="index">Work</a>
-				  <a class="item" href="projects">Projects</a>
-				  <a class="item active" href="about">About</a>
-				</div>
-			</div>
+		<div class="hidden items-center gap-1 sm:flex">
+			<a href="index" class="rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-fg">Work</a>
+			<a href="projects" class="rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-fg">Projects</a>
+			<a href="about" aria-current="page" class="rounded-lg bg-surface-2 px-3 py-1.5 text-sm font-medium">About</a>
 		</div>
 
-		<div class="ten wide column">
-			<div class="ui very relaxed items">
+		<button type="button" class="btn-icon -mr-2 hidden sm:hidden" data-nav-toggle aria-controls="site-menu" aria-expanded="false" aria-label="Menu">
+			<svg class="icon text-xl" aria-hidden="true"><use href="#i-menu"></use></svg>
+		</button>
+	</nav>
 
-				<div class="item">
-					<div class="content">
-						<div class="description">
-							<p>
-								I like to <a class="underlined" href="https://github.com/yasmeen">code</a>, <a class="underlined" href="https://nomadlist.com/@yasmeen">travel</a>, <a class="underlined" href="https://www.strava.com/athletes/118008350">run</a>, and play with my pups - <a class="underlined" href="https://www.instagram.com/hellotruffles/">Truffles</a> and <a class="underlined" href="https://www.instagram.com/ciaopanini/">Panini</a>.
-							</p>
-						</div>
-					</div>
-				</div>
-
-			</div>
-
-		</div>
-
-
-		<div class="six wide column bitmoji">
-			<img src="static/img/chill_bitmoji.png" style="visibility: visible; max-width:100%; width: 200px;">
-		</div>
-
-		<div class="sixteen wide column">
-			<center>
-				Made with <span class='ec ec-sparkling-heart '></span>
-				<br>
-				ⓒ <a href="https://github.com/yasmeen">YR</a> 2024
-			</center>
+	<div id="site-menu" class="border-t border-border sm:hidden" data-nav-menu>
+		<div class="mx-auto flex max-w-4xl flex-col px-5 py-2">
+			<a href="index" class="rounded-lg px-3 py-2.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-fg">Work</a>
+			<a href="projects" class="rounded-lg px-3 py-2.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-fg">Projects</a>
+			<a href="about" aria-current="page" class="rounded-lg px-3 py-2.5 text-sm font-medium">About</a>
 		</div>
 	</div>
+</header>
+
+<main class="mx-auto max-w-4xl px-5 pb-24 pt-12 sm:pt-16">
+
+	<section class="rise flex items-start justify-between gap-6">
+		<div class="min-w-0">
+			<h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">Hi, I'm Yasmeen!</h1>
+
+			<p class="mt-4 max-w-[56ch] leading-relaxed text-muted">
+				I'm a hackathon-obsessed software engineer exploring fun &amp; futuristic ideas. I previously worked at
+				<a class="sweep sweep-hook" href="https://hook.xyz">Hook</a>,
+				<a class="sweep sweep-oscar" href="https://www.hioscar.com/">Oscar Health</a>,
+				<a class="sweep sweep-gs" href="https://www.goldmansachs.com/">GS</a>,
+				<a class="sweep sweep-celo" href="https://celo.org">Celo</a>,
+				<a class="sweep sweep-tinder" href="https://tinder.com">Tinder</a>,
+				<a class="sweep sweep-snapchat" href="https://snapchat.com">Snapchat</a>, and
+				<a class="sweep sweep-nasa" href="https://nasa.gov">NASA</a>.
+			</p>
+
+			<div class="mt-6 flex flex-wrap items-center gap-2">
+				<a class="btn" href="https://cal.com/yasmeen-roumie/30min">
+					<svg class="icon" aria-hidden="true"><use href="#i-calendar"></use></svg>
+					Let's chat
+				</a>
+				<a class="btn-icon size-9 border border-border sm:size-10" href="http://bit.ly/yasmeen-github" aria-label="GitHub">
+					<svg class="icon text-lg" aria-hidden="true"><use href="#i-github"></use></svg>
+				</a>
+				<a class="btn-icon size-9 border border-border sm:size-10" href="http://bit.ly/yasmeen-linkedin" aria-label="LinkedIn">
+					<svg class="icon text-lg" aria-hidden="true"><use href="#i-linkedin"></use></svg>
+				</a>
+				<a class="btn-icon size-9 border border-border sm:size-10" href="mailto:yasmeen.roumie@gmail.com" aria-label="Email">
+					<svg class="icon text-lg" aria-hidden="true"><use href="#i-mail"></use></svg>
+				</a>
+			</div>
+
+			<p class="mt-4 flex items-center gap-1.5 text-sm text-muted">
+				<svg class="icon" aria-hidden="true"><use href="#i-pin"></use></svg>
+				New York, NY
+			</p>
+		</div>
+
+		<img src="static/img/hey_bitmoji.png" alt="Bitmoji of Yasmeen waving"
+		     width="398" height="398"
+		     class="size-16 shrink-0 sm:size-32">
+	</section>
+
+	<section class="mt-16 grid gap-8 sm:grid-cols-[1fr_auto] sm:items-start sm:gap-12">
+		<p class="max-w-[52ch] text-lg leading-relaxed">
+			I like to <a class="marker" href="https://github.com/yasmeen">code</a>,
+			<a class="marker" href="https://nomadlist.com/@yasmeen">travel</a>,
+			<a class="marker" href="https://www.strava.com/athletes/118008350">run</a>, and play with my pups
+			<span class="whitespace-nowrap">- <a class="marker" href="https://www.instagram.com/hellotruffles/">Truffles</a></span>
+			and <a class="marker" href="https://www.instagram.com/ciaopanini/">Panini</a>.
+		</p>
+
+		<img src="static/img/chill_bitmoji.png" alt="Bitmoji of Yasmeen reading in a beanbag"
+		     width="398" height="398"
+		     class="order-first size-32 sm:order-none sm:size-44">
+	</section>
+
+	<!-- Capped at the photo's native 640px so it is never upscaled. -->
+	<figure class="mt-4 max-w-[640px]">
+		<img src="truffles.jpg" alt="Truffles, one of Yasmeen's dogs" width="640" height="531"
+		     class="w-full rounded-xl border border-border">
+	</figure>
+
+</main>
+
+<footer class="border-t border-border">
+	<div class="mx-auto flex max-w-4xl flex-col items-center gap-1 px-5 py-10 text-sm text-muted">
+		<p>Made with <span aria-hidden="true">💖</span><span class="sr-only">love</span></p>
+		<p>&copy; <a class="marker" href="https://github.com/yasmeen">YR</a> 2024</p>
+	</div>
+</footer>
+
 </body>
 </html>
