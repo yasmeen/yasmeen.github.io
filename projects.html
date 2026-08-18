@@ -54,12 +54,13 @@
 
 	<link rel='stylesheet' href='static/css/style.css'>
 
+	<script src="static/js/nav.js" defer></script>
 </head>
 <body>
 
 	<div class="ui main text container stackable grid">
 
-		<div class="ten wide column">
+		<div class="ten wide column intro-text">
 			<a class="myName" href="https://yasmeen.github.io"><h1>Hi, I'm Yasmeen!</h1></a>
 			<br>
 			<p>
@@ -77,16 +78,21 @@
 			<a href="https://bit.ly/yasmeen-linkedin"><i class="linkedin icon"></i></a>
 			<a href="mailto:yasmeen.roumie@gmail.com"><i class="mail icon"></i></a>
 		</div>
-		<div class="six wide column">
-			<img src="static/img/hey_bitmoji.png" style="visibility: visible; max-width: 100%; width:200px;">
+		<div class="six wide column intro-image">
+			<img class="avatar" src="static/img/hey_bitmoji.png" alt="Bitmoji of Yasmeen waving">
 		</div>
 
-		<div class="sixteen wide column">
-			<div class="ui stackable three item menu">
+		<div class="sixteen wide column nav-column">
+			<button class="nav-toggle" type="button" aria-controls="site-menu" aria-expanded="false">
+				<i class="bars icon"></i>Menu
+			</button>
+			<div class="nav-menu" id="site-menu">
+				<div class="ui stackable three item menu">
 
-			  <a class="item" href="index">Work</a>
-			  <a class="item active" href="projects">Projects</a>
-			  <a class="item" href="about">About</a>
+				  <a class="item" href="index">Work</a>
+				  <a class="item active" href="projects">Projects</a>
+				  <a class="item" href="about">About</a>
+				</div>
 			</div>
 		</div>
 

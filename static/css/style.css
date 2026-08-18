@@ -29,10 +29,92 @@ img {
   height: auto;
 }
 
+.avatar {
+  width: 200px;
+}
+
+/* The nav is a plain menu on desktop, so the hamburger stays out of the way. */
+.nav-toggle {
+  display: none;
+}
+
 /* Mobile */
 @media only screen and (max-width: 767px) {
   .main.container {
-    margin-top: 3em;
+    margin-top: 1.5em;
+  }
+
+  /* Keep the avatar beside the intro text rather than letting `stackable`
+     drop it into a full-width block of its own. */
+  .ui.stackable.grid > .column.intro-text,
+  .ui.stackable.grid > .column.intro-image {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  .ui.stackable.grid > .column.intro-text {
+    width: calc(100% - 100px) !important;
+    padding-right: 0 !important;
+  }
+
+  .ui.stackable.grid > .column.intro-image {
+    width: 100px !important;
+    padding-left: 0 !important;
+  }
+
+  .avatar {
+    width: 92px;
+  }
+
+  .intro-text h1 {
+    font-size: 1.5rem;
+    margin-top: 0;
+    margin-bottom: 0.25rem;
+  }
+
+  /* Spacer line breaks between the intro blocks; paragraph margins are
+     enough on a small screen. The <br> inside the location <p> is kept. */
+  .intro-text > br {
+    display: none;
+  }
+
+  .intro-text > p {
+    margin-bottom: 0.5em;
+  }
+
+  .ui.stackable.grid > .column.nav-column {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0 !important;
+  }
+
+  /* `very relaxed` gives every item a 2em top margin, and the first one's
+     collapses out of the list to sit under the nav. */
+  .ui.very.relaxed.items > .item:first-child {
+    margin-top: 0 !important;
+  }
+
+  /* `js-nav` is set by nav.js, so with JS off the menu stays visible rather
+     than collapsing behind a button that can never be opened. */
+  .nav-column.js-nav .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid rgba(34, 36, 38, 0.15);
+    border-radius: 0.28571429rem;
+    color: #383838;
+    cursor: pointer;
+    font: inherit;
+    line-height: 1;
+    padding: 0.75em 1em;
+  }
+
+  .nav-column.js-nav .nav-menu {
+    display: none;
+    margin-top: 0.5em;
+  }
+
+  .nav-column.js-nav.open .nav-menu {
+    display: block;
   }
 }
 .wireframe {
