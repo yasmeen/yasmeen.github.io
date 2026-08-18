@@ -82,39 +82,79 @@ img {
     margin-bottom: 0.5em;
   }
 
-  .ui.stackable.grid > .column.nav-column {
-    padding-top: 0.75rem !important;
-    padding-bottom: 0 !important;
-  }
-
   /* `very relaxed` gives every item a 2em top margin, and the first one's
      collapses out of the list to sit under the nav. */
   .ui.very.relaxed.items > .item:first-child {
     margin-top: 0 !important;
   }
 
+  /* Once collapsed the nav is a corner control, not a row in the page, so
+     lift it out of the grid flow and pin it to the top right. */
+  .ui.main.container.grid {
+    position: relative;
+  }
+
+  /* 0.5rem, not 0, so the glyph's own side bearing lands on the same edge as
+     the avatar and body text rather than against the screen. */
+  .ui.stackable.grid > .column.js-nav.nav-column {
+    position: absolute;
+    top: 0;
+    right: 0.5rem;
+    width: auto !important;
+    padding: 0 !important;
+    z-index: 10;
+  }
+
+  /* Keep the avatar clear of the toggle above it. */
+  .has-js-nav.ui.stackable.grid > .column.intro-image {
+    padding-top: 2.5rem !important;
+  }
+
   /* `js-nav` is set by nav.js, so with JS off the menu stays visible rather
      than collapsing behind a button that can never be opened. */
   .nav-column.js-nav .nav-toggle {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    background: #ffffff;
-    border: 1px solid rgba(34, 36, 38, 0.15);
-    border-radius: 0.28571429rem;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    background: none;
+    border: 0;
     color: #383838;
     cursor: pointer;
-    font: inherit;
-    line-height: 1;
-    padding: 0.75em 1em;
+    font-size: 1.25rem;
+    padding: 0;
   }
 
+  .nav-column.js-nav .nav-toggle .icon {
+    margin: 0;
+  }
+
+  /* Drops over the page rather than pushing it down. */
   .nav-column.js-nav .nav-menu {
     display: none;
-    margin-top: 0.5em;
+    position: absolute;
+    top: 100%;
+    right: 0.5rem;
+    min-width: 11rem;
   }
 
   .nav-column.js-nav.open .nav-menu {
     display: block;
+  }
+
+  .nav-column.js-nav .nav-menu .ui.menu {
+    margin: 0;
+    box-shadow: 0 2px 8px rgba(34, 36, 38, 0.15);
+  }
+
+  /* `three item` centres its items and zeroes their side padding with
+     !important, which reads oddly in a narrow panel. */
+  .nav-column.js-nav .nav-menu .ui.menu .item {
+    justify-content: flex-start;
+    text-align: left;
+    padding-left: 1.25em !important;
+    padding-right: 1.25em !important;
   }
 }
 .wireframe {
