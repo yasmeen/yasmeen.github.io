@@ -13,32 +13,27 @@
 </head>
 <body>
 <h1>Tiny Foodie Privacy Policy</h1>
-<p><em>Last updated: September 30, 2026</em></p>
-<p>Tiny Foodie ("the app") is built local-first: there are no accounts, and your baby's profile - birth month, tried foods, allergen status, saved recipes - lives only on your device. You can delete all of it in one tap from Settings, and deleting the app deletes it too.</p>
-
+<p><em>Last updated: October 5, 2026</em></p>
+<p>Tiny Foodie is a parent-facing, local-first app. No app account is required. Your child's name and birth month, saved recipes, tried-foods profile and verdict history are stored on your device. Some features send the information described below to our services and providers. Local-first does not mean that nothing leaves your phone.</p>
 <h2>What leaves your phone</h2>
-<p><strong>Menu photos and dish text.</strong> When you scan a menu or check a dish, the photo or text is sent to our serverless proxy, which forwards it to OpenAI for reading. It is used only to produce your verdicts and is not retained by us or used to identify you.</p>
-<p><strong>Anonymous usage events.</strong> The app sends basic, anonymous instrumentation (for example, that a scan completed) tagged with a random install identifier generated on first launch. It is not linked to you, your device, or your child.</p>
-<p><strong>Purchases.</strong> If you buy Tiny Foodie Plus, the purchase is processed by Apple and recorded by RevenueCat under an anonymous app user ID so your subscription works and can be restored.</p>
-<!-- If OneSignal push is enabled in this build, uncomment:
-<p><strong>Push notifications.</strong> If you allow notifications, your device token is stored by OneSignal so we can send reminders you opted into.</p>
--->
-
-<h2>What never leaves your phone</h2>
-<p>Your child's name, birth month, tried-foods and allergen profile, saved recipes, and verdict history are stored locally with SwiftData and are never transmitted.</p>
-
+<p><strong>Menu and dish photos, dish text and recipe content.</strong> When you scan a menu, check a dish, import a recipe or request serving guidance or meal ideas, the relevant photo, text, link, ingredients and feeding-stage information are sent to our serverless proxy. OpenAI processes the content needed to read it or generate a response. Do not include names, faces or other personal information in photos or pasted text.</p>
+<p><strong>Nearby location.</strong> When you use nearby features, location coordinates may be sent to our proxy and Google Places to find and rank nearby places. This is separate from your child's locally stored profile.</p>
+<p><strong>Usage events.</strong> The app sends product-interaction events to our proxy with a random, persistent installation identifier and a timestamp. Event fields may include verdict state, source, time viewed, feeding stage and counts of foods, recipes or children. These events are written to server logs. The installation identifier does not contain your name or email, but it can connect events from the same installation; it is not fully anonymous.</p>
+<p><strong>Subscriptions.</strong> Apple processes payments for Tiny Foodie Pro. RevenueCat processes purchase history and subscription information under an app user identifier so access and restore purchases work.</p>
+<p><strong>OneSignal, when configured.</strong> The app can initialize OneSignal and send a feeding-stage tag when a valid OneSignal app ID is configured. OneSignal may collect installation identifiers and SDK/device metadata. This integration is conditional: having the SDK in the app does not mean it is enabled in every build. The current source configuration uses a placeholder app ID.</p>
+<h2>Retention and service providers</h2>
+<p>Our menu-scan cache stores extracted menu answers, keyed by a hash of the submitted photo, for up to 30 days. That cache does not store the raw menu photo. Other menu and place data may be cached to avoid repeating requests. Generated food and recipe images may be stored in our image cache and hosting storage.</p>
+<p>OpenAI's normal API abuse-monitoring logs may include prompts, responses and other submitted content and may retain it for up to 30 days, subject to its policies and exceptions. We do not promise zero retention by OpenAI. See <a href="https://developers.openai.com/api/docs/guides/your-data">OpenAI's data controls</a>.</p>
+<p>Providers used for these features include Apple, RevenueCat, OpenAI, Google Places, Vercel (hosting and image storage) and Upstash (cache); OneSignal is used when configured. Provider logs, subscription records and caches are separate from the data stored on your device and follow their applicable retention practices. We use this data to provide app features, manage subscriptions and understand product use, not to sell personal information.</p>
+<h2>What stays on your device</h2>
+<p>The full local profile, including name, birth month, saved history and tried-foods/allergen records, is stored with SwiftData. Derived feeding-stage information and event counts can still leave the device as described above. We do not claim that every piece of child-related information stays on your phone.</p>
 <h2>Children's privacy</h2>
-<p>The app is used by parents, not children. We do not knowingly collect personal information from children, and the design goal is to know as little about your child as possible - everything personal stays on your device.</p>
-
-<h2>Third-party processors</h2>
-<p>OpenAI (menu and recipe reading), RevenueCat (subscriptions), Apple (App Store distribution and payments)<!-- , OneSignal (push notifications, if enabled)-->.</p>
-
-<h2>Your choices</h2>
-<p>Delete everything from Settings at any time. To manage or cancel a subscription, use your Apple ID subscription settings. Questions: <a href="mailto:yazbuilds@gmail.com">yazbuilds@gmail.com</a>.</p>
-
+<p>Tiny Foodie is for parents and caregivers, not for children to use independently. We do not ask children to create accounts. Parents should avoid submitting identifying child information to the photo, text or recipe-reading features.</p>
+<h2>Your choices and deletion</h2>
+<p>You can delete local app data from Settings. Deleting the app removes its local data; it does not automatically erase provider logs, shared caches or purchase records. Manage or cancel subscriptions in your Apple account subscription settings. You can decline camera, photo or location permissions, though the related feature may not work.</p>
+<p>For privacy questions or requests about data held by our services, email <a href="mailto:yazbuilds@gmail.com">yazbuilds@gmail.com</a>. We will help identify the relevant records and explain any limits on deletion.</p>
 <h2>Changes</h2>
-<p>If this policy changes, the updated version will be posted at this address with a new date.</p>
-
-<footer>&copy; 2026 Yasmeen Roumie</footer>
+<p>We will post updates here when our data practices change.</p>
+<footer>&copy; 2026 Yasmeen Roumie. <a href="/tinyfoodie/">Support</a></footer>
 </body>
 </html>
