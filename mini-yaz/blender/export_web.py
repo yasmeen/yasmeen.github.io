@@ -5,7 +5,7 @@ scene.cycles.samples = 96
 scene.render.bake.target = 'VERTEX_COLORS'
 scene.world.light_settings.distance = 0.3
 for o in [smile] + [e for e, g in eyes] + [g for e, g in eyes]: o.hide_render = True   # the face features stay out of the bake
-parts = [('head', head), ('body', body), ('bow', bow), ('armL', arms[0]), ('armR', arms[1])]
+parts = [('head', head), ('body', body), ('phones', phones), ('pads', pads), ('armL', arms[0]), ('armR', arms[1])]
 for name, ob in parts:
     # the body and arms are baked without each other: they meet at the shoulder ball, and must shade alike there
     for o in [body] + arms: o.hide_render = (ob in arms and o is body) or (ob is body and o in arms)
@@ -40,19 +40,20 @@ data = {}
 def ring_sizes(rings, N): return [1 if (r[1] < 1e-5 and r[2] < 1e-5) else N for r in rings]
 data['head'] = pack(head); data['head']['rings'] = ring_sizes(headRings, NH)
 data['body'] = pack(body); data['body']['idx'] = tris(body)
-data['bow'] = pack(bow); data['bow']['idx'] = tris(bow)
+data['phones'] = pack(phones); data['phones']['idx'] = tris(phones)
+data['pads'] = pack(pads); data['pads']['idx'] = tris(pads)
 # arms: exported once in their own space (pivot at the shoulder ball's center, hanging down -y); the right arm has the
 # same points, so it only adds its own baked shading. Placement comes from the rig.
 data['arm'] = pack(arms[0], world=False); data['arm']['idx'] = tris(arms[0])
 data['arm']['aoR'] = pack(arms[1], world=False)['ao']
 data['rig'] = dict(shoulderL=to3((-SHOULDER[0], SHOULDER[1], SHOULDER[2])), shoulderR=to3(SHOULDER), armTilt=ARM_TILT, ballR=ARM_R[0],
-                   neck=[0, 1.5, 0], headCenter=[0, 2.34, 0], bowBase=to3(BOW_AT))
+                   neck=[0, 1.5, 0], headCenter=[0, 2.34, 0])
 data['split'] = dict(top=SPLIT_TOP, low=SPLIT_LOW, step=SPLIT_STEP)
 data['eyes'] = []
 for eye, g in eyes:
     nrm = eye.rotation_quaternion @ Vector((0, 0, 1))
     data['eyes'].append(dict(p=to3(eye.location), n=to3(nrm), s=[eye.scale[0], eye.scale[1], eye.scale[2]], glintR=0.016))
 data['smile'] = dict(pts=[to3(p) for p in pts], r=cu.bevel_depth)
-data['colors'] = dict(blue=list(BLUE), white=list(WHITE))
+data['colors'] = dict(blue=list(BLUE), white=list(WHITE), phones=list(PHONES), pads=list(PADS))
 json.dump(data, open(os.path.join(OUT, 'miniyaz.json'), 'w'))
 print('exported', os.path.getsize(os.path.join(OUT, 'miniyaz.json')), 'bytes;', {k: v['n'] for k, v in data.items() if isinstance(v, dict) and 'n' in v})

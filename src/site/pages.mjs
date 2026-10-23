@@ -172,6 +172,8 @@ function lab() {
 ${body}
     </div>
   </section>`;
+  // the colors in assets/mini-yaz/mascot.js (COLORS), as swatches
+  const YAZ_COLORS = [['blue', 'Finder blue', '#2692EE'], ['pink', 'Pink', '#EE669E'], ['lilac', 'Lilac', '#926EE6'], ['mint', 'Mint', '#1EB894'], ['tangerine', 'Tangerine', '#FA8C28'], ['graphite', 'Graphite', '#545A66']];
   const btn = (attr, label, pressed) => `<button type="button" ${attr}${pressed !== undefined ? ` aria-pressed="${pressed}"` : ''}>${label}</button>`;
   const main = `
 <section class="page-hero">
@@ -183,7 +185,7 @@ ${body}
 
 <div class="lab">
 ${win('playground', 'Mini Yaz playground', `      <h2 id="playground-h">Mini Yaz playground</h2>
-      <p>The same character that lives on every page, with the controls showing. Try the actions, dress it up, or put it to sleep. Five quick taps also work. <a href="/making-mini-yaz">How it was made ›</a></p>
+      <p>The same character that lives on every page, with the controls showing. Try the actions, dress it up, change its color, or put it to sleep. Five quick taps also work. The color you pick follows you around the site. <a href="/making-mini-yaz">How it was made ›</a></p>
       <div class="exp-grid">
         <div class="stage">
           <div class="mascot-slot">${mascot({ pose: 'idle', label: 'Mini Yaz in the playground', main: true, id: 'play-yaz' })}</div>
@@ -194,6 +196,9 @@ ${win('playground', 'Mini Yaz playground', `      <h2 id="playground-h">Mini Yaz
           </div>
           <div class="control-row"><b>Wear or bring</b>
             <span class="seg">${btn('data-prop="shoes"', 'Running shoes', false)}${btn('data-prop="bib"', 'Race bib', false)}${btn('data-prop="visor"', 'Headset', false)}${btn('data-prop="laptop"', 'Laptop', false)}</span>
+          </div>
+          <div class="control-row"><b>Color</b>
+            <span class="swatches">${YAZ_COLORS.map(([k, label, hex]) => `<button type="button" class="swatch" data-color="${k}" aria-pressed="${k === 'blue'}" style="--sw:${hex}" aria-label="${label}" title="${label}"></button>`).join('')}</span>
           </div>
           <div class="control-row"><b>Look</b>
             <span class="seg">${btn('data-sleep', 'Doze off')}${btn('data-wire', 'Wireframe', false)}</span>

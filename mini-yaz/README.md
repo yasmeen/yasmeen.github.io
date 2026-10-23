@@ -1,7 +1,7 @@
 # Mini Yaz
 
-The little vinyl character on yasmeenroumie.com: a toy in the style of Apple's Little Finder Guy, as a girl (a bow and
-lashes). The write-up is at [/making-mini-yaz](https://yasmeenroumie.com/making-mini-yaz).
+The little vinyl character on yasmeenroumie.com: a toy in the style of Apple's Little Finder Guy, with lashes and
+pink headphones. The write-up is at [/making-mini-yaz](https://yasmeenroumie.com/making-mini-yaz).
 
 ## How it fits together
 
@@ -12,7 +12,8 @@ blender/build_miniyaz.py          builds the model in Blender             ->  bl
 ```
 
 The proportions in `build_miniyaz.py` (the head's width at every height, where the eyes and smile sit, where the
-blue-and-white line steps over at the nose) were measured from a front view of the Finder figure. The torso and
+blue-and-white line steps over at the nose) were measured from a front view of the Finder figure, and the body was checked against a fan-made 3D model of it
+(sliced at every height; used only for measuring, not shipped). The torso and
 legs are one surface: distance fields (the legs are round cones, wide at the hip and smaller at the foot) blended with
 a smooth union and meshed with marching cubes. Each shoulder is a ball in that surface; each arm is a separate round
 cone grown out of its ball, turning about the ball's center, so the shoulder looks the same in every pose. The arms are
@@ -44,7 +45,11 @@ Every lighting and material value lives in `LOOK` at the top of `assets/mini-yaz
 them live. The material is glossy vinyl with a clear coat and a thin iridescent film, with the shading baked in Blender. The blue and white aren't painted on the
 model: the shader splits each part at a line (on the head, the Finder profile, stepping over at the nose), so the edge
 stays crisp at any size. Where the blue faces the big top-left light it lifts toward a light cyan, like the figure.
-`LOOK.bow` sets the bow's color (it's the Finder blue unless set).
+`LOOK.phones` and `LOOK.pads` set the headphones' colors.
+
+The Lab's playground offers a few colors (`COLORS` in `assets/mini-yaz/mascot.js`: the colored half and the headphones).
+The choice is kept in `localStorage` (`yaz-color`), so every Mini Yaz on the site wears it; the still posters are
+tinted toward it with a CSS filter until the live one fades in.
 
 ## Rendering images of Mini Yaz
 
@@ -66,7 +71,6 @@ channel offsets), props, and crop.
   overshoot, and attention (the head, then the body) on critically damped springs.
 - Actions: `wave`, `hop`, `spin`, `cheer`, `dizzy` (five quick taps), `startle` (waking from a nap). It dozes off after
   a quiet minute.
-- The bow lags the head by about a tenth of a second, so it settles after every move.
 - Props: `laptop`, `shoes`, `map`, `bib`, `trophy`, `visor`, `phone`, `coin`. Held props ride on the body and are moved to
   the hand every frame, so they stay upright.
 - It pauses off screen and in hidden tabs, holds still for reduced motion or when motion is paused, caps the resolution

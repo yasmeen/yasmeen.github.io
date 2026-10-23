@@ -14,6 +14,14 @@ const motionOff = () => root.dataset.motion === 'paused' || matchMedia('(prefers
       b.setAttribute('aria-pressed', String(on));
       const c = ctl(); if (c) c.setProp(b.dataset.prop, on);
     }));
+    // color: remembered on this device, so every Mini Yaz on the site wears it (assets/mini-yaz/mascot.js)
+    const swatches = panel.querySelectorAll('[data-color]');
+    const showColor = (name) => swatches.forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.color === name)));
+    try { showColor(localStorage.getItem('yaz-color') || 'blue'); } catch (e) { /* private mode */ }
+    swatches.forEach((b) => b.addEventListener('click', () => {
+      showColor(b.dataset.color);
+      document.dispatchEvent(new CustomEvent('miniyaz:color', { detail: { name: b.dataset.color } }));
+    }));
     const sleep = panel.querySelector('[data-sleep]');
     if (sleep) sleep.addEventListener('click', () => { const c = ctl(); if (c) c.sleepNow(); });
     const wire = panel.querySelector('[data-wire]');

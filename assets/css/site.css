@@ -423,6 +423,11 @@ a.att:hover { color: var(--ink); }
 .seg button { min-height: 30px; padding: 0 12px; border: 0; border-left: 1px solid var(--seg-line); background: transparent; color: var(--ink); font: 12px/1 var(--sans); cursor: pointer; }
 .seg button:first-child { border-left: 0; }
 .seg button[aria-pressed="true"] { background: var(--seg-on); color: var(--seg-on-ink, #FFFFFF); font-weight: 700; text-shadow: 0 -1px 0 rgba(0,0,0,.25); }
+.swatches { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+.swatch { width: 30px; height: 30px; border-radius: 50%; border: 1px solid rgba(0,0,0,.3); cursor: pointer; padding: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.12) 50%, rgba(255,255,255,0) 51%), linear-gradient(90deg, var(--sw) 50%, #E8EDF5 50%); }
+.swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--win-panel), 0 0 0 4px var(--link); }
+.swatch:focus-visible { outline: 2px solid var(--link); outline-offset: 3px; }
 .gelmaker-out { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 26px 16px; }
 .gelmaker-out code { display: block; width: 100%; max-height: 132px; overflow: auto; padding: 10px 12px; border-radius: 8px; background: var(--win-panel); border: 1px solid var(--win-panel-line); font: 11.5px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-all; color: var(--ink-2); }
 input[type="range"] { width: 100%; accent-color: var(--gel-b); }

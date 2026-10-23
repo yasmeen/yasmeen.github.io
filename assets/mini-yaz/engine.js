@@ -24,8 +24,10 @@ export function createMiniYaz(THREE, host, data, opts) {
   const LOOK = Object.assign({
     exposure: 0.95, env: 1.0, soft: 3.0, fill: 1.0, top: 2.0, rim: 1.5, room: 0.3,
     key: 2.6, keyX: -4, keyY: 6, keyZ: 6, hemi: 0.1,
-    // glossy vinyl, Finder blue and white; the blue lifts toward a light cyan where it faces the top-left light
-    blue: [38, 146, 238], white: [232, 237, 245], bow: null, cyan: [125, 218, 255], lift: 0.7,
+    // glossy vinyl, Finder blue and white; colors lift toward a lighter, cooler shade where they face the top-left light
+    // (the blue toward a light cyan, like the figure). `blue` is the colored half, whatever color it is.
+    blue: [38, 146, 238], white: [232, 237, 245], lift: 0.7,
+    phones: null, pads: null,             // the headphones' shell and cushions (the model's own pinks unless set)
     rough: 0.42, spec: 0.6, coat: 1.0, coatRough: 0.14,
     // a thin pearly film over the vinyl: a faint shift of color as the surface turns away
     irid: 0.7, iridIOR: 1.35, iridMin: 150, iridMax: 450,
@@ -83,8 +85,14 @@ export function createMiniYaz(THREE, host, data, opts) {
     uEyeA: { value: new THREE.Vector3(0, -9, 0) }, uEyeB: { value: new THREE.Vector3(0, -9, 0) }, uEyeS: { value: new THREE.Vector3(1, 1, 1) }, uEyeK: { value: LOOK.eyeSeat }
   };
   const mats = [];
-  // the lifted color for a base color: blues lift toward the light cyan, whites stay white
-  const liftOf = (c) => { const hsl = {}; c.getHSL(hsl); return Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b) > 0.3 && hsl.h > 0.5 && hsl.h < 0.7 ? rgb(LOOK.cyan) : c.clone(); };
+  // the lifted color for a base color: a lighter, slightly cooler shade (the Finder blue lifts to a light cyan); whites
+  // and grays stay as they are
+  const liftOf = (c) => {
+    const s = c.clone().convertLinearToSRGB();
+    if (Math.max(s.r, s.g, s.b) - Math.min(s.r, s.g, s.b) < 0.2) return c.clone();
+    const hsl = {}; c.getHSL(hsl, THREE.SRGBColorSpace);
+    return new THREE.Color().setHSL((hsl.h - 0.03 + 1) % 1, Math.min(1, hsl.s + 0.1), Math.min(0.82, hsl.l + 0.2), THREE.SRGBColorSpace);
+  };
   // a: the color left of the split (your left), b: right of it. split: [x, x below the nose, nose height, softness];
   // profile: the head's Finder face, where the line steps over below the nose (on the front only)
   const vinyl = (a, b, o) => {
@@ -164,7 +172,7 @@ export function createMiniYaz(THREE, host, data, opts) {
     return g;
   };
   const R = data.rig;
-  const NECK = R.neck, HC = R.headCenter, BB = R.bowBase, SPLIT = data.split;
+  const NECK = R.neck, HC = R.headCenter, SPLIT = data.split;
 
   // ---------- the rig ----------
   const root = new THREE.Group();          // hop, spin, lean (pivot at the feet)
@@ -222,7 +230,7 @@ export function createMiniYaz(THREE, host, data, opts) {
   const armL = makeArm(-1), armR = makeArm(1);
   const ARM_TILT = (R.armTilt * Math.PI) / 180;
 
-  // head: pivots at the neck; the bow and the face ride along
+  // head: pivots at the neck; the headphones and the face ride along
   const neck = new THREE.Group();
   neck.position.fromArray(NECK);
   squash.add(neck);
@@ -232,13 +240,13 @@ export function createMiniYaz(THREE, host, data, opts) {
   const headGeo = geo(data.head, loftIndex(data.head.rings), NECK);
   head.add(new THREE.Mesh(headGeo, headMat));
   { const e = data.eyes[1].s; faceUni.uEyeS.value.set(e[0] * LOOK.eyeW, e[1], e[0] * LOOK.eyeW); }
-  // the bow pivots where it sits on the head, so it can lag behind the head's moves
-  const bowPivot = new THREE.Group();
-  bowPivot.position.set(BB[0] - NECK[0], BB[1] - NECK[1], BB[2] - NECK[2]);
-  head.add(bowPivot);
-  const bowMat = vinyl(LOOK.bow ? rgb(LOOK.bow) : BLUE());
-  const bow = new THREE.Mesh(geo(data.bow, Array.from(dec(data.bow.idx, Uint16Array)), BB), bowMat);
-  bowPivot.add(bow);
+  // headphones: they ride on the head
+  const phonesMat = vinyl(LOOK.phones ? rgb(LOOK.phones) : rgb(C.phones), null, { rough: 0.3 });
+  const padsMat = vinyl(LOOK.pads ? rgb(LOOK.pads) : rgb(C.pads), null, { rough: 0.7, coat: 0, irid: 0 });
+  const headphones = new THREE.Group();
+  headphones.add(new THREE.Mesh(geo(data.phones, Array.from(dec(data.phones.idx, Uint16Array)), NECK), phonesMat));
+  headphones.add(new THREE.Mesh(geo(data.pads, Array.from(dec(data.pads.idx, Uint16Array)), NECK), padsMat));
+  head.add(headphones);
 
   // face: the features ride in a group at the head center. They're painted on, like the toy's: they stay put on the face
   // and look where the head looks.
@@ -561,6 +569,7 @@ export function createMiniYaz(THREE, host, data, opts) {
   };
   const props = {};
   (opts.props || []).forEach((name) => { if (PROPS[name]) props[name] = PROPS[name](); });
+  headphones.visible = !props.visor;       // the headset takes the headphones' place
 
   // ---------- motion engine ----------
   const bez = (x1, y1, x2, y2) => {
@@ -732,7 +741,6 @@ export function createMiniYaz(THREE, host, data, opts) {
     sp: { yaw: S(), pitch: S(), body: S(), happy: S(), lean: S(), mouth: S(), spark: S() },
     drag: null, dragYaw: S(), dragVel: 0, lastDragEnd: -1e9,
     press: S(), pressTo: 0, scrollKick: 0, lastScrollY: typeof window !== 'undefined' ? window.scrollY : 0,
-    hist: [],
     sleep: S(), asleep: false, lastInput: 0, taps: [], focus: null, oohUntil: -1e9,
     paused: !!opts.paused, ema: 16, slowFor: 0, lastFrame: 0
   };
@@ -753,13 +761,6 @@ export function createMiniYaz(THREE, host, data, opts) {
     wake();
   };
   const busy = () => m.act && !ACTIONS[m.act.kind].idle && m.t - m.act.t0 < ACTIONS[m.act.kind].dur * 0.7;   // idle moments never block a tap
-  const past = (key, ago) => {
-    const h = m.hist, target = m.t - ago;
-    for (let i = h.length - 1; i > 0; i--) {
-      if (h[i - 1].t <= target) { const a = h[i - 1], b = h[i], k = (target - a.t) / Math.max(1, b.t - a.t); return a[key] + (b[key] - a[key]) * k; }
-    }
-    return h.length ? h[0][key] : 0;
-  };
 
   // where the pointer is, as yaw/pitch from Mini Yaz's head (screen space, so it works anywhere on the page)
   const attention = () => {
@@ -953,12 +954,6 @@ export function createMiniYaz(THREE, host, data, opts) {
     smile.scale.set(1 + 0.15 * joy, 1 + 0.9 * joy, 1);
     setMouth(P.mouth);
     smile.visible = P.mouth < 0.45;
-    // follow-through: the bow reads the head about 110 ms late
-    m.hist.push({ t: m.t, roll: P.hRoll, pitch: P.hPitch, y: P.y, sy: P.sy, yaw: P.yaw + P.hYaw });
-    while (m.hist.length > 2 && m.hist[0].t < m.t - 400) m.hist.shift();
-    const lagRoll = past('roll', 110) - P.hRoll, lagPitch = past('pitch', 110) - P.hPitch;
-    const lagY = past('y', 100) - P.y, lagYaw = past('yaw', 120) - (P.yaw + P.hYaw);
-    bowPivot.rotation.set(clamp(0.5 * lagPitch - 0.4 * lagY, -0.3, 0.3), clamp(0.25 * lagYaw, -0.25, 0.25), clamp(0.5 * lagRoll + 0.15 * lagYaw, -0.25, 0.25));
     const air = clamp(P.y / 0.45, 0, 1);
     blob.scale.set((1 - 0.4 * air) * sx, 1 - 0.3 * air, 1);
     blob.material.opacity = (blob.userData.base ?? 0.32) * (1 - 0.55 * air);
@@ -1111,7 +1106,7 @@ export function createMiniYaz(THREE, host, data, opts) {
       headMat.userData.own.uColA.value.copy(BLUE()); headMat.userData.own.uColB.value.copy(WHITE());
       armMats[0].userData.own.uColA.value.copy(WHITE()); armMats[0].userData.own.uColB.value.copy(WHITE());
       armMats[1].userData.own.uColA.value.copy(BLUE()); armMats[1].userData.own.uColB.value.copy(BLUE());
-      const bc = LOOK.bow ? rgb(LOOK.bow) : BLUE(); bowMat.userData.own.uColA.value.copy(bc); bowMat.userData.own.uColB.value.copy(bc);
+      [[phonesMat, LOOK.phones || C.phones], [padsMat, LOOK.pads || C.pads]].forEach(([mt, c]) => { mt.userData.own.uColA.value.copy(rgb(c)); mt.userData.own.uColB.value.copy(rgb(c)); });
       mats.forEach((mt) => {
         if (!mt.userData.fixed) mt.roughness = LOOK.rough;
         mt.specularIntensity = LOOK.spec; mt.clearcoatRoughness = LOOK.coatRough;
@@ -1128,6 +1123,7 @@ export function createMiniYaz(THREE, host, data, opts) {
     setProp: (name, on) => {
       if (on && !props[name] && PROPS[name]) props[name] = PROPS[name]();
       if (props[name]) props[name].visible = !!on;
+      if (name === 'visor') headphones.visible = !on;
       render(); wake();
     },
     setWireframe: (on) => { scene.traverse((o) => { if (o.material && o.material !== blob.material) o.material.wireframe = !!on; }); render(); wake(); },

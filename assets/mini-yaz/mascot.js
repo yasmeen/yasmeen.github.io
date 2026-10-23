@@ -5,7 +5,7 @@
 // Markup (see src/site/templates.mjs):
 //   <div class="mini-yaz" data-pose="wave" data-props="laptop"> <img class="yaz-poster"> <button class="yaz-hit"> </div>
 // Pages talk to it with events on document: 'miniyaz:react' {kind}, 'miniyaz:look' {x, y}, 'miniyaz:motion' {paused},
-// 'miniyaz:theme' {dark}.
+// 'miniyaz:theme' {dark}, 'miniyaz:color' {name}. The color (one of COLORS) is remembered on this device.
 import { createMiniYaz } from './engine.js';
 
 const here = new URL('.', import.meta.url);
@@ -52,6 +52,30 @@ const unpack = (bytes) => {
 };
 
 const root = document.documentElement;
+
+// Mini Yaz's colors: the colored half (`blue`, whatever color it is) and the headphones. The still posters are rendered
+// in the Finder blue, so for another color they're tinted toward it (hue and saturation) until the live one fades in.
+export const COLORS = {
+  blue: { label: 'Finder blue', blue: [38, 146, 238], phones: [238, 168, 192], pads: [226, 142, 172] },
+  pink: { label: 'Pink', blue: [238, 102, 158], phones: [236, 239, 245], pads: [206, 211, 224] },
+  lilac: { label: 'Lilac', blue: [146, 110, 230], phones: [238, 168, 192], pads: [226, 142, 172] },
+  mint: { label: 'Mint', blue: [30, 184, 148], phones: [238, 168, 192], pads: [226, 142, 172] },
+  tangerine: { label: 'Tangerine', blue: [250, 140, 40], phones: [38, 146, 238], pads: [30, 112, 196] },
+  graphite: { label: 'Graphite', blue: [84, 90, 102], phones: [238, 168, 192], pads: [226, 142, 172] }
+};
+const colorName = () => { try { const c = localStorage.getItem('yaz-color'); return COLORS[c] ? c : 'blue'; } catch (e) { return 'blue'; } };
+const lookOf = (name) => { const c = COLORS[name]; return { blue: c.blue, phones: c.phones, pads: c.pads }; };
+const hueSat = ([r, g, b]) => {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  const h = !d ? 0 : mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, d / (1 - Math.abs(mx + mn - 1) || 1)];
+};
+const posterFilter = (name) => {
+  if (name === 'blue') return '';
+  const [h0, s0] = hueSat(COLORS.blue.blue), [h1, s1] = hueSat(COLORS[name].blue);
+  return `hue-rotate(${Math.round(h1 - h0)}deg) saturate(${(s1 / s0).toFixed(2)})`;
+};
 const reducedMQ = matchMedia('(prefers-reduced-motion: reduce)');
 const isPaused = () => root.dataset.motion === 'paused';
 const isDark = () => root.dataset.appearance === 'graphite';
@@ -63,6 +87,7 @@ const INTRO = { wave: 'wave', spin: 'spin' };
 function mount(el) {
   const pose = el.dataset.pose || 'idle';
   const poster = el.querySelector('.yaz-poster');
+  if (poster) poster.style.filter = posterFilter(colorName());
   const hit = el.querySelector('.yaz-hit');
   const gl = document.createElement('div');
   gl.className = 'yaz-gl';
@@ -83,6 +108,7 @@ function mount(el) {
       reduced: reducedMQ.matches,
       paused: isPaused(),
       dark: isDark(),
+      look: lookOf(colorName()),
       onState: (s) => {
         el.classList.toggle('is-asleep', s === 'sleep');
         if (s === 'dizzy') { el.classList.remove('is-dizzy'); void el.offsetWidth; el.classList.add('is-dizzy'); }
@@ -140,3 +166,9 @@ document.addEventListener('miniyaz:react', (e) => { const c = nearest(); if (c) 
 document.addEventListener('miniyaz:look', (e) => { const c = nearest(); if (c) c.lookAt(e.detail.x, e.detail.y, e.detail.ms); });
 document.addEventListener('miniyaz:motion', (e) => live.forEach((c) => c.setPaused(e.detail.paused)));
 document.addEventListener('miniyaz:theme', (e) => live.forEach((c) => c.setDark(e.detail.dark)));
+document.addEventListener('miniyaz:color', (e) => {
+  const name = COLORS[e.detail.name] ? e.detail.name : 'blue';
+  try { if (name === 'blue') localStorage.removeItem('yaz-color'); else localStorage.setItem('yaz-color', name); } catch (err) { /* private mode */ }
+  live.forEach((c) => c.setLook(lookOf(name)));
+  all.forEach((el) => { const p = el.querySelector('.yaz-poster'); if (p) p.style.filter = posterFilter(name); });
+});

@@ -1,4 +1,4 @@
-# Builds Mini Yaz in Blender: a glossy vinyl toy in the style of Apple's Little Finder Guy, as a girl (a bow, and
+# Builds Mini Yaz in Blender: a glossy vinyl toy in the style of Apple's Little Finder Guy, as a girl (headphones, and
 # lashes drawn in the browser). The proportions were measured from a front view of the Finder figure.
 # Blender is Z-up; Mini Yaz faces -Y. Ground at z = 0, 3.15 to the top of the head.
 # (The earlier clay version, built from reference/turn-*.png with profiles.py, is in the git history.)
@@ -171,20 +171,25 @@ def round_cone(P, a, b, r1, r2):
     return np.where(end_a, np.sqrt(x2 + y2) * il2 - r1, out)
 def smin(a, b, k):
     h = np.clip(0.5 + 0.5 * (b - a) / k, 0, 1); return b * (1 - h) + a * h - k * h * (1 - h)
+# The body was checked against a 3D model of the figure (used only as a measuring reference): a deep, round belly that
+# sits a little behind the head, short legs, and arms that hang fairly close to the sides.
 # the torso: a soft egg, narrower under the head and widest at the belly, its bottom tucked into the legs
-torsoRows = [(1.75, 0.0), (1.7, 0.38), (1.6, 0.5), (1.45, 0.565), (1.25, 0.62), (1.05, 0.67), (0.85, 0.695), (0.7, 0.685),
-             (0.6, 0.64), (0.52, 0.5), (0.47, 0.3), (0.45, 0.0)]
+torsoRows = [(1.75, 0.0), (1.7, 0.38), (1.6, 0.5), (1.45, 0.565), (1.25, 0.62), (1.05, 0.67), (0.85, 0.695), (0.7, 0.69),
+             (0.58, 0.66), (0.48, 0.585), (0.41, 0.45), (0.37, 0.25), (0.355, 0.0)]
 torsoD = profile_sdf(torsoRows)
-# legs: wide at the hip, tapering to small round feet that just flatten where they stand
-LEG_HIP, LEG_FOOT = (0.3, 0.0, 0.74, 0.38), (0.31, 0.0, 0.21, 0.235)        # (x, y, z, radius)
+BELLY_Y, BELLY_D = 0.1, 0.93               # the torso's center sits this far behind the head's; its depth over its width
+# legs: wide at the hip, tapering to small round feet (a little longer than wide) that just flatten where they stand
+LEG_HIP, LEG_FOOT = (0.31, BELLY_Y, 0.62, 0.36), (0.33, BELLY_Y, 0.2, 0.24)   # (x, y, z, radius)
+LEG_LONG = 1.12
 # arms: plump, wide at the shoulder ball and smaller at the hand, hanging out at ARM_TILT degrees
-ARM_TILT, ARM_LEN, ARM_R = 38.0, 0.8, (0.235, 0.145)
-SHOULDER = (0.64, 0.0, 1.4)
+ARM_TILT, ARM_LEN, ARM_R = 31.0, 0.8, (0.235, 0.145)
+SHOULDER = (0.63, 0.0, 1.4)
 def d_trunk(P):
     """torso, legs and the two shoulder balls"""
     x, y, z = P[:, 0], P[:, 1], P[:, 2]
-    dT = torsoD(np.sqrt(x * x + (y / 0.88) ** 2), z)
-    legs = [round_cone(P, (LEG_HIP[0] * s, 0, LEG_HIP[2]), (LEG_FOOT[0] * s, 0, LEG_FOOT[2]), LEG_HIP[3], LEG_FOOT[3]) for s in (-1, 1)]
+    dT = torsoD(np.sqrt(x * x + ((y - BELLY_Y) / BELLY_D) ** 2), z)
+    PL = P.copy(); PL[:, 1] = BELLY_Y + (y - BELLY_Y) / LEG_LONG
+    legs = [round_cone(PL, (LEG_HIP[0] * s, LEG_HIP[1], LEG_HIP[2]), (LEG_FOOT[0] * s, LEG_FOOT[1], LEG_FOOT[2]), LEG_HIP[3], LEG_FOOT[3]) for s in (-1, 1)]
     dL = smin(legs[0], legs[1], 0.06)              # the crotch, rounded
     dL = -smin(-dL, z, 0.03)                       # flat where the feet meet the ground, with a soft edge
     d = smin(dT, dL, 0.2)
@@ -250,41 +255,76 @@ for arm in arms:
     inside = (d_trunk(W) < -0.004) & (L < -ARM_R[0] - 0.05)
     print('arm points inside the body past the shoulder:', int(inside.sum()))
 
-# ---------------- the bow: two puffy loops and a knot, on top of the head on the white side ----------------
-BOW_L = 0.4
-bowH = [(0.0, 0.05), (0.1, 0.064), (0.25, 0.1), (0.45, 0.135), (0.65, 0.152), (0.8, 0.143), (0.9, 0.112), (0.96, 0.07), (1.0, 0.0)]
-bowT = [(0.0, 0.055), (0.3, 0.064), (0.7, 0.068), (0.9, 0.056), (1.0, 0.0)]
-def bow_loop(side, n=28):
-    ss = np.linspace(0, 1, n)
-    hs = np.interp(ss, [p[0] for p in bowH], [p[1] for p in bowH]); ts = np.interp(ss, [p[0] for p in bowT], [p[1] for p in bowT])
-    hs = np.convolve(np.pad(hs, 1, mode='edge'), np.ones(3) / 3, mode='valid'); hs[-1] = 0
-    ts = np.convolve(np.pad(ts, 1, mode='edge'), np.ones(3) / 3, mode='valid'); ts[-1] = 0
-    ob = loft('BowLoop', [(-s * BOW_L, h, t, 0.0) for s, h, t in zip(ss, hs, ts)], 32 if WEB else 48)
-    ob.rotation_euler = (0, -side * math.pi / 2, 0)               # the loop's spine runs out sideways, its height up
-    ob.rotation_euler.rotate_axis('Y', side * math.radians(-12))   # and tips up a little
+# ---------------- headphones: over-ear, a band over the top of the head and a cup over each side ----------------
+# Distance fields again: each cup is a rounded oval puck pressed to the side of the head, with a softer cushion on the
+# inside, and the band follows the head's outline a little above it, from one cup to the other. Two meshes: the shell
+# (band and cups) and the cushions, so they can be different colors.
+def head_halfwidth(z):
+    zs = [r[0] for r in headRings][::-1]; rs = [r[1] for r in headRings][::-1]
+    return float(np.interp(z, zs, rs))
+CUP_Z, CUP_RY, CUP_RZ = 2.3, 0.26, 0.32          # cup center height, half-sizes front-to-back and up-and-down
+CUP_IN = head_halfwidth(CUP_Z) - 0.02            # where the cushion meets the head
+PAD_T, SHELL_T, CUP_ROUND = 0.09, 0.15, 0.06
+def rounded_puck(P, cx, half_t, ry, rz, rr):
+    """a rounded oval puck facing along x: centered at x = cx, half-thickness half_t, half-sizes ry, rz, edge radius rr"""
+    x = np.abs(P[:, 0] - cx); rho = np.sqrt((P[:, 1] / ry) ** 2 + ((P[:, 2] - CUP_Z) / rz) ** 2) * min(ry, rz)
+    qx, qr = x - (half_t - rr), rho - (min(ry, rz) - rr)
+    return np.sqrt(np.maximum(qx, 0) ** 2 + np.maximum(qr, 0) ** 2) + np.minimum(np.maximum(qx, qr), 0) - rr
+# the band's path: the head's front outline from the top of one cup over to the other, lifted off the head
+BAND_OFF, BAND_R, BAND_W = 0.075, 0.042, 2.6     # lift, thickness (radius), and how much wider than thick it is
+zs = np.linspace(CUP_Z + CUP_RZ * 0.55, TOP, 60)
+side = [(head_halfwidth(z), z) for z in zs]
+pts = []
+for i, (x, z) in enumerate(side):                # offset each outline point along the outline's outward normal
+    x0, z0 = side[max(i - 1, 0)]; x1, z1 = side[min(i + 1, len(side) - 1)]
+    n = np.array([z1 - z0, -(x1 - x0)]); n = n / (np.linalg.norm(n) + 1e-9)
+    if n[0] < 0: n = -n
+    pts.append((x + n[0] * BAND_OFF, z + n[1] * BAND_OFF))
+pts[-1] = (0.0, TOP + BAND_OFF)
+band_path = np.array([(-x, z) for x, z in pts] + [(x, z) for x, z in pts[::-1]])
+band_path = np.stack([band_path[:, 0], np.zeros(len(band_path)), band_path[:, 1]], 1)
+band_path[:, 0] = np.clip(band_path[:, 0], -(CUP_IN + PAD_T + SHELL_T * 0.6), CUP_IN + PAD_T + SHELL_T * 0.6)
+def d_band(P):
+    Q = P.copy(); Q[:, 1] /= BAND_W
+    d = np.full(len(P), 1e9)
+    for a, b in zip(band_path[:-1], band_path[1:]):
+        ab = b - a; t = np.clip(((Q - a) @ ab) / max(ab @ ab, 1e-12), 0, 1)
+        d = np.minimum(d, np.sqrt(((Q - (a + np.outer(t, ab))) ** 2).sum(1)))
+    return d - BAND_R
+def d_shell(P):
+    d = d_band(P)
+    for s_ in (-1, 1):
+        cup = rounded_puck(P * np.array([s_, 1, 1]), CUP_IN + PAD_T + SHELL_T / 2, SHELL_T / 2, CUP_RY, CUP_RZ, CUP_ROUND)
+        d = smin(d, cup, 0.04)
+    return d
+def d_pads(P):
+    d = np.full(len(P), 1e9)
+    for s_ in (-1, 1):
+        d = np.minimum(d, rounded_puck(P * np.array([s_, 1, 1]), CUP_IN + PAD_T / 2 + 0.01, PAD_T / 2 + 0.01, CUP_RY * 0.92, CUP_RZ * 0.92, 0.045))
+    return d
+def mesh_field(name, fn, lo, hi, vox, target):
+    gx_, gy_, gz_ = [np.arange(lo[i], hi[i] + vox, vox) for i in range(3)]
+    F = np.empty((len(gx_), len(gy_), len(gz_)), np.float32)
+    GX_, GY_ = np.meshgrid(gx_, gy_, indexing='ij')
+    for k0 in range(0, len(gz_), 12):
+        zz = gz_[k0:k0 + 12]
+        Q = np.stack([np.repeat(GX_[..., None], len(zz), 2).ravel(), np.repeat(GY_[..., None], len(zz), 2).ravel(),
+                      np.broadcast_to(zz, GX_.shape + (len(zz),)).ravel()], 1)
+        F[:, :, k0:k0 + 12] = fn(Q).reshape(GX_.shape + (len(zz),))
+    v_, f_, _, _ = marching_cubes(F, 0.0, spacing=(vox, vox, vox))
+    ob = mk(name, v_ + np.array([gx_[0], gy_[0], gz_[0]]), [tuple(t) for t in f_])
+    bpy.ops.object.select_all(action='DESELECT'); ob.select_set(True); bpy.context.view_layer.objects.active = ob
+    m_ = ob.modifiers.new('smooth', 'SMOOTH'); m_.factor = 0.5; m_.iterations = 3
+    bpy.ops.object.modifier_apply(modifier='smooth')
+    if WEB:
+        m_ = ob.modifiers.new('dec', 'DECIMATE'); m_.ratio = min(1.0, target / len(ob.data.vertices))
+        bpy.ops.object.modifier_apply(modifier='dec')
+    bpy.ops.object.shade_smooth()
     return ob
-loops = [bow_loop(-1), bow_loop(1)]
-bpy.ops.mesh.primitive_uv_sphere_add(segments=32 if WEB else 48, ring_count=20 if WEB else 32, radius=1.0)
-knot = bpy.context.active_object; knot.name = 'Knot'; knot.scale = (0.078, 0.075, 0.088)
-bpy.ops.object.shade_smooth()
-bpy.ops.object.select_all(action='DESELECT')
-for o in loops + [knot]: o.select_set(True)
-bpy.context.view_layer.objects.active = knot
-bpy.ops.object.join()
-bow = knot; bow.name = 'Bow'
-bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-# seat it where the head's outline tips 38 degrees from upright, on the white side, its face toward you
-best = None
-for i in range(1, len(headRings) - 1):
-    dz, da = headRings[i + 1][0] - headRings[i - 1][0], headRings[i + 1][1] - headRings[i - 1][1]
-    nrm = Vector((-dz, 0, da)).normalized()                    # the outline's outward normal
-    tilt = math.degrees(math.acos(max(-1.0, min(1.0, nrm.z))))
-    if best is None or abs(tilt - 38) < abs(best[0] - 38): best = (tilt, Vector((headRings[i][1], 0, headRings[i][0])), nrm)
-BOW_TILT, BOW_AT, BOW_N = best
-bow.rotation_euler = (0, math.radians(BOW_TILT), 0)
-bow.location = BOW_AT + BOW_N * 0.08 + Vector((0, -0.12, 0))     # resting on the head, a touch forward
-bpy.ops.object.select_all(action='DESELECT'); bow.select_set(True); bpy.context.view_layer.objects.active = bow
-bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+XW = CUP_IN + PAD_T + SHELL_T + 0.05
+HV = 0.008 if WEB else 0.0055
+phones = mesh_field('Headphones', d_shell, (-XW, -CUP_RY - 0.05, CUP_Z - CUP_RZ - 0.05), (XW, CUP_RY + 0.05, TOP + BAND_OFF + 0.08), HV, 3200)
+pads = mesh_field('Cushions', d_pads, (-XW, -CUP_RY - 0.05, CUP_Z - CUP_RZ - 0.05), (XW, CUP_RY + 0.05, CUP_Z + CUP_RZ + 0.05), HV, 1400)
 
 # ---------------- face: bead eyes and a thin smile, placed on the head ----------------
 EYE_X, EYE_Z, EYE_RX, EYE_RZ = 0.367, TOP - 0.552 * HH, 0.075, 0.085
@@ -348,11 +388,14 @@ headM = two_tone('Vinyl Head', BLUE, WHITE, True)
 bodyM = two_tone('Vinyl Body', WHITE, BLUE, False)
 blueM, _, _ = principled('Vinyl Blue', srgb(*BLUE))
 whiteM, _, _ = principled('Vinyl White', srgb(*WHITE))
+PHONES, PADS = (238, 168, 192), (226, 142, 172)       # soft pink shell, a deeper pink cushion
+phonesM, _, _ = principled('Headphones', srgb(*PHONES), rough=0.3)
+padsM, _, _ = principled('Cushions', srgb(*PADS), rough=0.7, coat=0.0)
 eyeM, _, _ = principled('Eye', srgb(18, 16, 18), rough=0.15, coat=1.0, spec=0.6)
 glintM, _, gb = principled('Glint', (1, 1, 1, 1), rough=0.3)
 if 'Emission Color' in gb.inputs: gb.inputs['Emission Color'].default_value = (1, 1, 1, 1); gb.inputs['Emission Strength'].default_value = 4.0
 lineM, _, _ = principled('Line', srgb(28, 26, 30), rough=0.5)
-for o, mt in [(head, headM), (body, bodyM), (arms[0], whiteM), (arms[1], blueM), (bow, blueM), (smile, lineM)] + [(e, eyeM) for e, g in eyes] + [(g, glintM) for e, g in eyes]:
+for o, mt in [(head, headM), (body, bodyM), (arms[0], whiteM), (arms[1], blueM), (phones, phonesM), (pads, padsM), (smile, lineM)] + [(e, eyeM) for e, g in eyes] + [(g, glintM) for e, g in eyes]:
     o.data.materials.clear(); o.data.materials.append(mt)
 
 # ---------------- light, world, render ----------------
