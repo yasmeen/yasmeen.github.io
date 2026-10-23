@@ -116,12 +116,14 @@ def front_point(X, Z):
 # shader; these are its numbers, in Blender space.
 SPLIT_TOP, SPLIT_LOW, SPLIT_STEP = -0.02, 0.12, TOP - 0.595 * HH
 
-# ---------------- body: a plump round torso with tapered legs and ball-jointed shoulders ----------------
-# Every part is a distance field. The legs are round cones, wide at the hip and smaller at the foot, joined to the torso
-# with a smooth union so they grow out of it with a soft fillet. Each shoulder is a ball, joined the same way. The result
-# is meshed with marching cubes.
-# The arms are separate pieces that grow out of those same balls and turn about their centers. A ball turned about its
-# center doesn't change, so the shoulder looks the same in every pose: no seam, and nothing stretches when an arm goes up.
+# ---------------- body: a plump round torso with tapered legs and arms, all one piece ----------------
+# Every part is a distance field: the torso is a column with a smooth outline, the legs and arms are round cones (wide
+# where they join, smaller at the end, the arms ending in a rounded mitten), and each joins the torso with a smooth union,
+# so it grows out of it with a soft fillet. The result is meshed with marching cubes, then every point is moved exactly
+# onto the surface, and its normal is taken from the field, so the shading is as smooth as the shape (not faceted by the
+# triangles).
+# The arms stay part of this one surface when they move: the browser draws the body from the same distance field, with
+# each arm turned about its shoulder (assets/mini-yaz/engine.js), so the blend is exact in every pose.
 from skimage.measure import marching_cubes
 def mono(xs, vs):
     """monotone cubic through (xs, vs), xs increasing: no overshoot and no kinks between the points (no ridges)"""
@@ -156,6 +158,7 @@ def profile_sdf(rows, r_max=1.4, res=0.004):
         i, j = fz.astype(np.int32), fr.astype(np.int32); u, v = fz - i, fr - j
         val = T[i, j] * (1 - u) * (1 - v) + T[i + 1, j] * u * (1 - v) + T[i, j + 1] * (1 - u) * v + T[i + 1, j + 1] * u * v
         return val + np.maximum(rho - gr[-1], 0)
+    look.table = (T, res, gz[0])                   # the browser samples the same table
     return look
 def round_cone(P, a, b, r1, r2):
     """distance to a cone with round ends: radius r1 around a, r2 around b (P: n x 3)"""
@@ -181,79 +184,76 @@ BELLY_Y, BELLY_D = 0.1, 0.93               # the torso's center sits this far be
 # legs: wide at the hip, tapering to small round feet (a little longer than wide) that just flatten where they stand
 LEG_HIP, LEG_FOOT = (0.31, BELLY_Y, 0.62, 0.36), (0.34, BELLY_Y, 0.17, 0.255)   # (x, y, z, radius)
 LEG_LONG = 1.15
-# arms: plump, wide at the shoulder ball and smaller at the hand, hanging out at ARM_TILT degrees
-ARM_TILT, ARM_LEN, ARM_R = 26.0, 0.8, (0.225, 0.145)
-SHOULDER = (0.65, 0.0, 1.4)
+# arms: plump, wide at the shoulder and smaller toward the wrist, ending in a slightly rounder mitten; hanging out at
+# ARM_TILT degrees, and turning about SHOULDER. Below the armpit they hang just clear of the torso (only the shoulder is
+# blended), so nothing is joined that has to tear apart when an arm lifts.
+ARM_TILT = 30.0
+SHOULDER = (0.64, 0.0, 1.4)
+# k: how far the shoulder's fillet reaches; it narrows to kLow below the armpit, so a hanging hand doesn't bridge to the hip
+ARM = dict(wrist=0.56, hand=0.63, rShoulder=0.235, rWrist=0.122, rHand=0.142, kHand=0.06, k=0.13, kLow=0.03, kFrom=1.05, kTo=1.25)
+LEG_K = 0.26                                       # how far the hips' fillet reaches (wide, so belly and legs are one curve)
+def arm_axis(s):
+    t = math.radians(ARM_TILT); return np.array([s * math.sin(t), 0.0, -math.cos(t)])
+def d_arm(P, s):
+    S = np.array([SHOULDER[0] * s, SHOULDER[1], SHOULDER[2]]); ax = arm_axis(s)
+    cone = round_cone(P, S, S + ax * ARM['wrist'], ARM['rShoulder'], ARM['rWrist'])
+    hand = np.sqrt(((P - (S + ax * ARM['hand'])) ** 2).sum(1)) - ARM['rHand']
+    return smin(cone, hand, ARM['kHand'])
 def d_trunk(P):
-    """torso, legs and the two shoulder balls"""
+    """torso and legs"""
     x, y, z = P[:, 0], P[:, 1], P[:, 2]
     dT = torsoD(np.sqrt(x * x + ((y - BELLY_Y) / BELLY_D) ** 2), z)
     PL = P.copy(); PL[:, 1] = BELLY_Y + (y - BELLY_Y) / LEG_LONG
     legs = [round_cone(PL, (LEG_HIP[0] * s, LEG_HIP[1], LEG_HIP[2]), (LEG_FOOT[0] * s, LEG_FOOT[1], LEG_FOOT[2]), LEG_HIP[3], LEG_FOOT[3]) for s in (-1, 1)]
     dL = smin(legs[0], legs[1], 0.06)              # the crotch, rounded
     dL = -smin(-dL, z, 0.03)                       # flat where the feet meet the ground, with a soft edge
-    d = smin(dT, dL, 0.2)
-    for s in (-1, 1):
-        ball = np.sqrt(((P - np.array([SHOULDER[0] * s, SHOULDER[1], SHOULDER[2]])) ** 2).sum(1)) - (ARM_R[0] + 0.003)
-        d = smin(d, ball, 0.12)
+    return smin(dT, dL, LEG_K)
+def arm_k(z):
+    t = np.clip((z - ARM['kFrom']) / (ARM['kTo'] - ARM['kFrom']), 0, 1); t = t * t * (3 - 2 * t)
+    return ARM['kLow'] + (ARM['k'] - ARM['kLow']) * t
+def d_body(P):
+    d = d_trunk(P)
+    for s in (-1, 1): d = smin(d, d_arm(P, s), arm_k(P[:, 2]))
     return d
-d_body = d_trunk
-VOX = 0.011 if WEB else 0.0085
-gx = np.arange(-1.25, 1.25 + VOX, VOX); gy = np.arange(-0.75, 0.75 + VOX, VOX); gz = np.arange(-0.04, 1.86, VOX)
-field = np.empty((len(gx), len(gy), len(gz)), np.float32)
-GX, GY = np.meshgrid(gx, gy, indexing='ij')
-for k0 in range(0, len(gz), 16):                   # in slabs, to keep memory small
-    zz = gz[k0:k0 + 16]
-    P = np.stack([np.repeat(GX[..., None], len(zz), 2).ravel(), np.repeat(GY[..., None], len(zz), 2).ravel(),
-                  np.broadcast_to(zz, GX.shape + (len(zz),)).ravel()], 1)
-    field[:, :, k0:k0 + 16] = d_body(P).reshape(GX.shape + (len(zz),))
-bv, bf, _, _ = marching_cubes(field, 0.0, spacing=(VOX, VOX, VOX))
-del field
-bv += np.array([gx[0], gy[0], gz[0]])
-body = mk('Body', bv, [tuple(f) for f in bf])
-bpy.ops.object.select_all(action='DESELECT')
-body.select_set(True); bpy.context.view_layer.objects.active = body
-sm = body.modifiers.new('smooth', 'SMOOTH'); sm.factor = 0.5; sm.iterations = 4     # just the voxel steps
-bpy.ops.object.modifier_apply(modifier='smooth')
-if WEB:
-    dm = body.modifiers.new('dec', 'DECIMATE'); dm.ratio = min(1.0, 7000 / len(body.data.vertices))
+def field_grad(fn, P, h=1e-3):
+    g = np.zeros_like(P)
+    for k in range(3):
+        e = np.zeros(3); e[k] = h
+        g[:, k] = (fn(P + e) - fn(P - e)) / (2 * h)
+    return g
+def onto_surface(ob, fn, iters=4):
+    """moves every point of the mesh exactly onto the field's surface; returns the field's normals there"""
+    V = np.array([v.co[:] for v in ob.data.vertices], float)
+    for _ in range(iters):
+        g = field_grad(fn, V); V -= (fn(V) / np.maximum((g * g).sum(1), 1e-6))[:, None] * g
+    for v, c in zip(ob.data.vertices, V): v.co = c
+    ob.data.update()
+    g = field_grad(fn, V)
+    return g / np.maximum(np.linalg.norm(g, axis=1), 1e-9)[:, None]
+def mesh_field(name, fn, lo, hi, vox, target, smooth=3):
+    gx_, gy_, gz_ = [np.arange(lo[i], hi[i] + vox, vox) for i in range(3)]
+    F = np.empty((len(gx_), len(gy_), len(gz_)), np.float32)
+    GX_, GY_ = np.meshgrid(gx_, gy_, indexing='ij')
+    for k0 in range(0, len(gz_), 12):              # in slabs, to keep memory small
+        zz = gz_[k0:k0 + 12]
+        Q = np.stack([np.repeat(GX_[..., None], len(zz), 2).ravel(), np.repeat(GY_[..., None], len(zz), 2).ravel(),
+                      np.broadcast_to(zz, GX_.shape + (len(zz),)).ravel()], 1)
+        F[:, :, k0:k0 + 12] = fn(Q).reshape(GX_.shape + (len(zz),))
+    v_, f_, _, _ = marching_cubes(F, 0.0, spacing=(vox, vox, vox))
+    ob = mk(name, v_ + np.array([gx_[0], gy_[0], gz_[0]]), [tuple(t) for t in f_])
+    bpy.ops.object.select_all(action='DESELECT'); ob.select_set(True); bpy.context.view_layer.objects.active = ob
+    m_ = ob.modifiers.new('smooth', 'SMOOTH'); m_.factor = 0.5; m_.iterations = smooth
+    bpy.ops.object.modifier_apply(modifier='smooth')
+    # the web build is light; the full model keeps a dozen times the detail (marching cubes alone gives far more)
+    m_ = ob.modifiers.new('dec', 'DECIMATE'); m_.ratio = min(1.0, (target if WEB else 12 * target) / len(ob.data.vertices))
     bpy.ops.object.modifier_apply(modifier='dec')
-bpy.ops.object.shade_smooth()
-# the arm, in its own space: the pivot (the ball's center) at the origin, hanging along -Z. It's a round cone whose root
-# is the shoulder ball itself; the part of it that is ball is cut away, so the arm starts right where it leaves the ball,
-# tangent to it, and the torso's ball (a hair bigger) covers the cut edge in any pose.
-AV = 0.008 if WEB else 0.006
-ax = np.arange(-0.27, 0.27 + AV, AV); az = np.arange(-ARM_LEN - 0.03, ARM_R[0] + 0.03, AV)
-AX, AY, AZ = np.meshgrid(ax, ax, az, indexing='ij')
-P = np.stack([AX.ravel(), AY.ravel(), AZ.ravel()], 1)
-afield = round_cone(P, (0, 0, 0), (0, 0, -(ARM_LEN - ARM_R[1])), ARM_R[0], ARM_R[1]).reshape(AX.shape)
-av, af, _, _ = marching_cubes(afield.astype(np.float32), 0.0, spacing=(AV, AV, AV))
-av += np.array([ax[0], ax[0], az[0]])
-del AX, AY, AZ, P, afield
-Z_TAN = -ARM_R[0] * (ARM_R[0] - ARM_R[1]) / (ARM_LEN - ARM_R[1])   # where the cone leaves the ball, along the arm
-keep = [f for f in af if av[f, 2].min() < Z_TAN - 0.004]
-used = np.unique(np.array(keep).ravel()); remap = -np.ones(len(av), int); remap[used] = np.arange(len(used))
-arm0 = mk('Arm', av[used], [tuple(remap[f]) for f in keep])
-bpy.ops.object.select_all(action='DESELECT'); arm0.select_set(True); bpy.context.view_layer.objects.active = arm0
-sm = arm0.modifiers.new('smooth', 'SMOOTH'); sm.factor = 0.5; sm.iterations = 3
-bpy.ops.object.modifier_apply(modifier='smooth')
-if WEB:
-    dm = arm0.modifiers.new('dec', 'DECIMATE'); dm.ratio = min(1.0, 1800 / len(arm0.data.vertices))
-    bpy.ops.object.modifier_apply(modifier='dec')
-bpy.ops.object.shade_smooth()
-arms = []
-for s in (-1, 1):                                  # both arms share the vertex order, so one export serves both
-    arm = arm0 if s < 0 else bpy.data.objects.new('Arm', arm0.data.copy())
-    if s > 0: scene.collection.objects.link(arm)
-    arm.location = (SHOULDER[0] * s, SHOULDER[1], SHOULDER[2])
-    arm.rotation_euler = (0, -math.radians(ARM_TILT) * s, 0)
-    arms.append(arm)
-bpy.context.view_layer.update()
-# check: past its ball, a hanging arm must stay clear of the body (otherwise it would show a crease where they cross)
-for arm in arms:
-    W = np.array([arm.matrix_world @ v.co for v in arm.data.vertices]); L = np.array([v.co[2] for v in arm.data.vertices])
-    inside = (d_trunk(W) < -0.004) & (L < -ARM_R[0] - 0.05)
-    print('arm points inside the body past the shoulder:', int(inside.sum()))
+    bpy.ops.object.shade_smooth()
+    ob.data['nrm'] = onto_surface(ob, fn).tolist()
+    return ob
+# The browser doesn't use this mesh: it draws the body straight from the same distance field (see export_web.py), so
+# the web build only needs a light copy, to shade the head's underside in the bake.
+VOX = 0.015 if WEB else 0.0085
+body = mesh_field('Body', d_body, (-1.3, -0.75, -0.04), (1.3, 0.85, 1.86), VOX, 4000)
 
 # ---------------- headphones: over-ear, a band over the top of the head and a cup over each side ----------------
 # Distance fields again: each cup is a rounded oval puck pressed to the side of the head, with a softer cushion on the
@@ -262,16 +262,17 @@ for arm in arms:
 def head_halfwidth(z):
     zs = [r[0] for r in headRings][::-1]; rs = [r[1] for r in headRings][::-1]
     return float(np.interp(z, zs, rs))
-CUP_Z, CUP_RY, CUP_RZ = 2.3, 0.26, 0.32          # cup center height, half-sizes front-to-back and up-and-down
-CUP_IN = head_halfwidth(CUP_Z) - 0.02            # where the cushion meets the head
-PAD_T, SHELL_T, CUP_ROUND = 0.09, 0.15, 0.06
+CUP_Z, CUP_RY, CUP_RZ = 2.3, 0.225, 0.275        # cup center height, half-sizes front-to-back and up-and-down
+CUP_IN = head_halfwidth(CUP_Z) - 0.025           # where the cushion meets the head
+PAD_T, SHELL_T, CUP_ROUND = 0.075, 0.115, 0.05
 def rounded_puck(P, cx, half_t, ry, rz, rr):
     """a rounded oval puck facing along x: centered at x = cx, half-thickness half_t, half-sizes ry, rz, edge radius rr"""
     x = np.abs(P[:, 0] - cx); rho = np.sqrt((P[:, 1] / ry) ** 2 + ((P[:, 2] - CUP_Z) / rz) ** 2) * min(ry, rz)
     qx, qr = x - (half_t - rr), rho - (min(ry, rz) - rr)
     return np.sqrt(np.maximum(qx, 0) ** 2 + np.maximum(qr, 0) ** 2) + np.minimum(np.maximum(qx, qr), 0) - rr
-# the band's path: the head's front outline from the top of one cup over to the other, lifted off the head
-BAND_OFF, BAND_R, BAND_W = 0.075, 0.042, 2.6     # lift, thickness (radius), and how much wider than thick it is
+# the band's path: the head's front outline from the top of one cup over to the other; a padded band resting on the head
+BAND_R, BAND_W = 0.052, 2.2                      # thickness (radius), and how much wider than thick it is
+BAND_OFF = BAND_R - 0.008                        # its center line sits a thickness off the head, pressed in a touch: it rests on it
 zs = np.linspace(CUP_Z + CUP_RZ * 0.55, TOP, 60)
 side = [(head_halfwidth(z), z) for z in zs]
 pts = []
@@ -302,25 +303,6 @@ def d_pads(P):
     for s_ in (-1, 1):
         d = np.minimum(d, rounded_puck(P * np.array([s_, 1, 1]), CUP_IN + PAD_T / 2 + 0.01, PAD_T / 2 + 0.01, CUP_RY * 0.92, CUP_RZ * 0.92, 0.045))
     return d
-def mesh_field(name, fn, lo, hi, vox, target):
-    gx_, gy_, gz_ = [np.arange(lo[i], hi[i] + vox, vox) for i in range(3)]
-    F = np.empty((len(gx_), len(gy_), len(gz_)), np.float32)
-    GX_, GY_ = np.meshgrid(gx_, gy_, indexing='ij')
-    for k0 in range(0, len(gz_), 12):
-        zz = gz_[k0:k0 + 12]
-        Q = np.stack([np.repeat(GX_[..., None], len(zz), 2).ravel(), np.repeat(GY_[..., None], len(zz), 2).ravel(),
-                      np.broadcast_to(zz, GX_.shape + (len(zz),)).ravel()], 1)
-        F[:, :, k0:k0 + 12] = fn(Q).reshape(GX_.shape + (len(zz),))
-    v_, f_, _, _ = marching_cubes(F, 0.0, spacing=(vox, vox, vox))
-    ob = mk(name, v_ + np.array([gx_[0], gy_[0], gz_[0]]), [tuple(t) for t in f_])
-    bpy.ops.object.select_all(action='DESELECT'); ob.select_set(True); bpy.context.view_layer.objects.active = ob
-    m_ = ob.modifiers.new('smooth', 'SMOOTH'); m_.factor = 0.5; m_.iterations = 3
-    bpy.ops.object.modifier_apply(modifier='smooth')
-    if WEB:
-        m_ = ob.modifiers.new('dec', 'DECIMATE'); m_.ratio = min(1.0, target / len(ob.data.vertices))
-        bpy.ops.object.modifier_apply(modifier='dec')
-    bpy.ops.object.shade_smooth()
-    return ob
 XW = CUP_IN + PAD_T + SHELL_T + 0.05
 HV = 0.008 if WEB else 0.0055
 phones = mesh_field('Headphones', d_shell, (-XW, -CUP_RY - 0.05, CUP_Z - CUP_RZ - 0.05), (XW, CUP_RY + 0.05, TOP + BAND_OFF + 0.08), HV, 3200)
@@ -395,7 +377,7 @@ eyeM, _, _ = principled('Eye', srgb(18, 16, 18), rough=0.15, coat=1.0, spec=0.6)
 glintM, _, gb = principled('Glint', (1, 1, 1, 1), rough=0.3)
 if 'Emission Color' in gb.inputs: gb.inputs['Emission Color'].default_value = (1, 1, 1, 1); gb.inputs['Emission Strength'].default_value = 4.0
 lineM, _, _ = principled('Line', srgb(28, 26, 30), rough=0.5)
-for o, mt in [(head, headM), (body, bodyM), (arms[0], whiteM), (arms[1], blueM), (phones, phonesM), (pads, padsM), (smile, lineM)] + [(e, eyeM) for e, g in eyes] + [(g, glintM) for e, g in eyes]:
+for o, mt in [(head, headM), (body, bodyM), (phones, phonesM), (pads, padsM), (smile, lineM)] + [(e, eyeM) for e, g in eyes] + [(g, glintM) for e, g in eyes]:
     o.data.materials.clear(); o.data.materials.append(mt)
 
 # ---------------- light, world, render ----------------
@@ -439,7 +421,7 @@ if 'norender' not in ARGS:
     render(camF, os.path.join(OUT, 'r_front.png'), 600, 600)
     render(camS, os.path.join(OUT, 'r_side.png'), 600, 600)
     render(camH, os.path.join(OUT, 'r_hero.png'), 600, 700)
-bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'miniyaz_web.blend' if WEB else 'miniyaz.blend'))
+bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'miniyaz_web.blend' if WEB else 'miniyaz.blend'), compress=True)
 if WEB:
     exec(open(os.path.join(HERE, 'export_web.py')).read())
 print('done')

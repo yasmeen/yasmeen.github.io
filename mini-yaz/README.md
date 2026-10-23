@@ -12,12 +12,17 @@ blender/build_miniyaz.py          builds the model in Blender             ->  bl
 ```
 
 The proportions in `build_miniyaz.py` (the head's width at every height, where the eyes and smile sit, where the
-blue-and-white line steps over at the nose) were measured from a front view of the Finder figure, and the body was checked against a fan-made 3D model of it
-(sliced at every height; used only for measuring, not shipped). The torso and
-legs are one surface: distance fields (the legs are round cones, wide at the hip and smaller at the foot) blended with
-a smooth union and meshed with marching cubes. Each shoulder is a ball in that surface; each arm is a separate round
-cone grown out of its ball, turning about the ball's center, so the shoulder looks the same in every pose. The arms are
-skinned to a shoulder, elbow and wrist bone.
+blue-and-white line steps over at the nose) were measured from a front view of the Finder figure, and the body was
+checked against a fan-made 3D model of it (sliced at every height; used only for measuring, not shipped). The body is
+one distance field: the torso is a column with a smooth outline, the legs and arms are round cones (wide where they
+join, smaller at the end; the arms end in a rounder mitten), and each joins the torso with a smooth union.
+
+The browser doesn't draw the body as a mesh. `export_web.py` hands over the same field (the torso's outline as a table
+of signed distances, stored as half floats, and the numbers for the legs and arms), and the body's shader traces it per
+pixel with each arm wherever it is in that frame, so the shoulders blend exactly in every pose. Its soft shadows are
+measured from the field too, with a stand-in for the head. The head and the headphones are meshes with their shadows
+baked in Blender (the head twice: with the headphones, at half strength, and without, for when a headset takes their
+place).
 
 In the browser, `assets/mini-yaz/mascot.js` mounts every `.mini-yaz` on a page and `assets/mini-yaz/engine.js` draws and
 animates it with three.js (r169, trimmed to what's used in `assets/mini-yaz/three.min.js`). `miniyaz.json` is also the
@@ -42,8 +47,8 @@ the output folder must be an absolute path, as above).
 ## The look
 
 Every lighting and material value lives in `LOOK` at the top of `assets/mini-yaz/engine.js`, and `setLook()` changes
-them live. The material is satin, pearly vinyl (a light clear coat, a thin iridescent film and a cool sheen), with the shading
-baked in Blender. The blue and white aren't painted on the
+them live. The material is satin, pearly vinyl (a light clear coat, a thin iridescent film and a cool sheen). Its soft shadows
+lean cool (`aoTint`: red falls off faster than blue), like the figure's. The blue and white aren't painted on the
 model: the shader splits each part at a line (on the head, the Finder profile, stepping over at the nose), so the edge
 stays crisp at any size. Where the blue faces the big top-left light it lifts toward a light cyan, like the figure.
 `LOOK.phones` and `LOOK.pads` set the headphones' colors.
@@ -72,10 +77,13 @@ channel offsets), props, and crop.
   overshoot, and attention (the head, then the body) on critically damped springs.
 - Actions: `wave`, `hop`, `spin`, `cheer`, `dizzy` (five quick taps), `startle` (waking from a nap). It dozes off after
   a quiet minute.
-- The arms are rigid: the actions' elbow and wrist bends are folded into the swing at the shoulder.
+- The arms are rigid: the actions' elbow and wrist bends are folded into the swing at the shoulder. Each arm swings on
+  a soft spring with a little weight, so it trails quick moves, floats up in a hop, drops on landing and lifts out in a
+  spin (`swingArms`).
 - Moving between pages, `assets/js/site.js` swaps the page in place and `mascot.js` carries the live Mini Yaz to the
   new page's spot (a glide, then a hop); `setStance()` and `setProps()` ease it into that page's pose and props.
 - Props: `laptop`, `shoes`, `map`, `bib`, `trophy`, `visor`, `phone`, `coin`. Held props ride on the body and are moved to
   the hand every frame, so they stay upright.
+- Below about 170 px tall (or with `opts.small`) the lashes go and the smile is drawn bolder; the peek icon uses this.
 - It pauses off screen and in hidden tabs, holds still for reduced motion or when motion is paused, caps the resolution
   on phones, and steps the resolution down further if frames run slow.

@@ -1,7 +1,7 @@
 // Packs the Blender export (miniyaz.json) into the small binary the site loads (assets/mini-yaz/model.bin).
 //   node mini-yaz/tools/pack-model.mjs [in.json] [out.bin]
 // Layout: "MYZ1", u32 meta length, meta JSON (padded to 4 bytes), then the sections the meta lists, the whole file gzipped.
-// Positions and the body's triangle list are delta coded per channel and split into low/high byte planes, so gzip
+// Positions, triangle lists and the body's distance table are delta coded per channel and split into low/high byte planes, so gzip
 // sees long runs of small numbers; that is about half the size of the base64 JSON, with no precision lost.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
@@ -41,12 +41,14 @@ const add = (path, kind, buf, count) => {
 };
 
 for (const [key, part] of Object.entries(data)) {
+  // the body's distance table (half floats, a row per height), delta coded along each row
+  if (key === 'shape') { const { torsoD, ...rest } = part; const u = b64(torsoD, Uint16Array); add('shape.torsoD', 'idx', deltaPlanes(u, 1), u.length); meta[key] = rest; continue; }
   if (!part || typeof part !== 'object' || !('pos' in part)) { meta[key] = part; continue; }
   const keep = {};
   for (const [k, v] of Object.entries(part)) {
     if (k === 'pos') add(`${key}.pos`, 'pos', deltaPlanes(b64(v, Uint16Array), 3), part.n * 3);
     else if (k === 'idx') { const u = b64(v, Uint16Array); add(`${key}.idx`, 'idx', deltaPlanes(u, 1), u.length); }
-    else if (['ao', 'aoR'].includes(k)) { const u = b64(v, Uint8Array); add(`${key}.${k}`, 'u8', Buffer.from(u), u.length); }
+    else if (['ao', 'aoBare', 'nrm'].includes(k)) { const u = b64(v, Uint8Array); add(`${key}.${k}`, 'u8', Buffer.from(u), u.length); }
     else keep[k] = v;
   }
   meta[key] = keep;

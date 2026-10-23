@@ -23,8 +23,8 @@ export function createMiniYaz(THREE, host, data, opts) {
   if (!renderer.getContext()) return null;
   // every lighting and material value in one place, so the look can be changed live with setLook()
   const LOOK = Object.assign({
-    exposure: 0.95, env: 1.0, soft: 3.0, fill: 1.0, top: 2.0, rim: 1.5, room: 0.3,
-    key: 2.6, keyX: -4, keyY: 6, keyZ: 6, hemi: 0.1,
+    exposure: 0.95, env: 1.0, soft: 3.0, fill: 1.0, top: 2.0, rim: 1.5, room: 0.5,
+    key: 2.6, keyX: -4, keyY: 6, keyZ: 6, hemi: 0.3,
     // pearly vinyl, Finder blue and white; colors lift toward a lighter, cooler shade where they face the top-left light
     // (the blue toward a light cyan, like the figure). `blue` is the colored half, whatever color it is.
     blue: [38, 146, 238], white: [232, 237, 245], lift: 0.9,
@@ -34,7 +34,8 @@ export function createMiniYaz(THREE, host, data, opts) {
     // pearly: a thin film that shifts the color as the surface turns away, and a soft cool sheen at the edges
     irid: 1.0, iridIOR: 1.45, iridMin: 250, iridMax: 700,
     pearl: 0.7, pearlColor: [200, 232, 255], pearlRough: 0.4,
-    aoPow: 1.8, aoDirect: 0.6, sss: 0.04, edge: 0.4,
+    // soft shadows (baked, or measured for the body); they lean cool, like the figure's: blue holds up, red falls off
+    aoPow: 1.2, aoTint: [1.25, 1.0, 0.75], aoDirect: 0.6, aoK: 0.9, sss: 0.04, edge: 0.25,
     // the face: bead eyes with lashes, a thin smile
     eyeSeat: 0.04, mouthW: 1.0, mouthR: 0.016, eyeGloss: 1.0, eyeW: 1.0, glint: 0.55, lash: 1.0
   }, opts.look || {});
@@ -83,7 +84,7 @@ export function createMiniYaz(THREE, host, data, opts) {
 
   // ---------- pearly vinyl in two colors, with the shading baked in Blender (vertex AO) ----------
   // shared uniforms, so a look change never recompiles a shader
-  const U = { uAoPow: { value: LOOK.aoPow }, uAoDirect: { value: LOOK.aoDirect }, uSss: { value: LOOK.sss }, uEdge: { value: LOOK.edge }, uLift: { value: LOOK.lift } };
+  const U = { uAoPow: { value: LOOK.aoPow }, uAoTint: { value: new THREE.Vector3().fromArray(LOOK.aoTint) }, uAoDirect: { value: LOOK.aoDirect }, uSss: { value: LOOK.sss }, uEdge: { value: LOOK.edge }, uLift: { value: LOOK.lift } };
   const faceUni = {
     uEyeA: { value: new THREE.Vector3(0, -9, 0) }, uEyeB: { value: new THREE.Vector3(0, -9, 0) }, uEyeS: { value: new THREE.Vector3(1, 1, 1) }, uEyeK: { value: LOOK.eyeSeat }
   };
@@ -108,29 +109,38 @@ export function createMiniYaz(THREE, host, data, opts) {
     });
     const own = { uColA: { value: a.clone() }, uColB: { value: (b || a).clone() }, uLiftA: { value: liftOf(a) }, uLiftB: { value: liftOf(b || a) }, uSplit: { value: (o.split || [0, 0, -99, 0.01]).slice() }, uProfile: { value: o.profile ? 1 : 0 } };
     m.userData.own = own; m.userData.fixed = o.rough != null; m.userData.plain = o.irid != null;
-    const face = !!o.face;
+    const face = !!o.face, march = o.march;
     m.onBeforeCompile = (sh) => {
-      Object.assign(sh.uniforms, U, own, face ? faceUni : {});
-      sh.vertexShader = 'attribute float ao;\nvarying vec3 vObj;\nvarying float vAO;\n' +
-        sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvObj = position;\nvAO = ao;');
-      let fs = 'varying vec3 vObj;\nvarying float vAO;\nuniform float uAoPow, uAoDirect, uSss, uEdge, uProfile, uLift;\nuniform vec3 uColA, uColB, uLiftA, uLiftB;\nuniform vec4 uSplit;\n' +
+      Object.assign(sh.uniforms, U, own, face ? faceUni : {}, march ? march.uniforms : {});
+      // a drawn-from-its-field part (the body) is rasterized as a box; each pixel finds the surface itself (see below)
+      sh.vertexShader = march
+        ? 'uniform vec3 uBoxMin, uBoxMax;\nvarying vec3 vBox;\n' + sh.vertexShader.replace('#include <begin_vertex>', 'vec3 transformed = mix(uBoxMin, uBoxMax, position + 0.5);\nvBox = transformed;')
+        : 'attribute float ao;\nvarying vec3 vObj;\nvarying float vAO;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvObj = position;\nvAO = ao;');
+      let fs = (march ? march.head : 'varying vec3 vObj;\nvarying float vAO;\n#define SPLIT_X vObj.x\n') +
+        'uniform float uAoPow, uAoDirect, uSss, uEdge, uProfile, uLift;\nuniform vec3 uColA, uColB, uLiftA, uLiftB, uAoTint;\nuniform vec4 uSplit;\n' +
         (face ? 'uniform vec3 uEyeA, uEyeB, uEyeS;\nuniform float uEyeK;\n' : '') + sh.fragmentShader;
+      if (march) {
+        fs = fs.replace('varying vec3 vViewPosition;', 'vec3 rmView;\n#define vViewPosition rmView')
+          .replace('void main() {', 'void main() {\n' + march.main)
+          .replace('#include <normal_fragment_begin>', 'float faceDirection = 1.0;\n  vec3 normal = rmNormal;\n  vec3 nonPerturbedNormal = normal;');
+      }
       fs = fs.replace('#include <color_fragment>', '#include <color_fragment>\n' +
         '  float sx = uSplit.x;\n' +
         '  if (uProfile > 0.5) sx = mix(uSplit.x, uSplit.y, smoothstep(uSplit.z + uSplit.w, uSplit.z - uSplit.w, vObj.y) * smoothstep(0.05, 0.3, vObj.z));\n' +
-        '  float sd = vObj.x - sx, sw = fwidth(sd) * 0.8 + 1e-5;\n' +
+        '  float sd = SPLIT_X - sx, sw = fwidth(sd) * 0.8 + 1e-5;\n' +
         '  float side = smoothstep(-sw, sw, sd);\n  diffuseColor.rgb = mix(uColA, uColB, side);\n  vec3 liftC = mix(uLiftA, uLiftB, side);\n' +
+        (march ? '  diffuseColor.a = rmCov;\n' : '') +
         // a faint shadow where each eye bead sits on the face
         (face ? '  float eA = length((vObj - uEyeA) / uEyeS), eB = length((vObj - uEyeB) / uEyeS);\n  diffuseColor.rgb *= 1.0 - uEyeK * (1.0 - smoothstep(1.0, 1.32, min(eA, eB)));\n' : ''));
       // where the surface faces the big top-left light, the color lifts (the blue toward a light cyan, like the figure)
       fs = fs.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n  diffuseColor.rgb = mix(diffuseColor.rgb, liftC, uLift * pow(max(dot(normal, normalize(vec3(-0.45, 0.75, 0.5))), 0.0), 3.0));');
       fs = fs.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += diffuseColor.rgb * uSss * vAO;   // a little light through the vinyl');
-      fs = fs.replace('#include <aomap_fragment>', '#include <aomap_fragment>\n  float occ = pow(vAO, uAoPow);\n  reflectedLight.indirectDiffuse *= occ;\n  reflectedLight.indirectSpecular *= occ;\n  reflectedLight.directDiffuse *= mix(1.0, occ, uAoDirect);\n' +
+      fs = fs.replace('#include <aomap_fragment>', '#include <aomap_fragment>\n  vec3 occ = pow(vec3(max(vAO, 1e-3)), uAoPow * uAoTint);\n  reflectedLight.indirectDiffuse *= occ;\n  reflectedLight.indirectSpecular *= occ;\n  reflectedLight.directDiffuse *= mix(vec3(1.0), occ, uAoDirect);\n' +
         '  float rimK = 1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);\n  float dim = 1.0 - uEdge * rimK * rimK;   // surfaces turning away from you fall off a little\n' +
         '  reflectedLight.directDiffuse *= dim;\n  reflectedLight.indirectDiffuse *= dim;');
       sh.fragmentShader = fs;
     };
-    m.customProgramCacheKey = () => (face ? 'my-vinyl-face' : 'my-vinyl');
+    m.customProgramCacheKey = () => (march ? 'my-vinyl-march' : face ? 'my-vinyl-face' : 'my-vinyl');
     mats.push(m);
     return m;
   };
@@ -167,12 +177,16 @@ export function createMiniYaz(THREE, host, data, opts) {
     }
     return idx;
   };
-  const geo = (m, index, off, aoKey) => {
+  const geo = (m, index, off) => {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(positions(m, off), 3));
-    g.setAttribute('ao', new THREE.BufferAttribute(dec(aoKey || m.ao, Uint8Array), 1, true));
+    g.setAttribute('ao', new THREE.BufferAttribute(Uint8Array.from(dec(m.ao, Uint8Array)), 1, true));
     g.setIndex(index);
-    g.computeVertexNormals();
+    // shapes built from distance fields come with their exact normals, so the shading isn't faceted by the triangles
+    if (m.nrm) {
+      const q = typeof m.nrm === 'string' ? dec(m.nrm, Int8Array) : new Int8Array(m.nrm.buffer, m.nrm.byteOffset, m.nrm.byteLength);
+      g.setAttribute('normal', new THREE.BufferAttribute(Float32Array.from(q, (v) => v / 127), 3));
+    } else g.computeVertexNormals();
     return g;
   };
   const R = data.rig;
@@ -185,43 +199,172 @@ export function createMiniYaz(THREE, host, data, opts) {
   scene.add(root);
   // the Finder colors: the head is blue on your left and white on your right, the body the other way round
   const BLUE = () => rgb(LOOK.blue || C.blue), WHITE = () => rgb(LOOK.white || C.white);
-  const bodyMat = vinyl(WHITE(), BLUE());
-  const bodyGeo = geo(data.body, Array.from(dec(data.body.idx, Uint16Array)));
-  // Where an arm leaves its shoulder ball, both meshes take the ball's exact normal (fading out away from the ball), so
-  // the shading runs straight across the join. On the body, only the outer half of each ball.
-  const ballNormals = (g, c, r, side) => {
-    const p = g.attributes.position, n = g.attributes.normal, v = new THREE.Vector3(), m = new THREE.Vector3();
-    for (let i = 0; i < p.count; i++) {
-      v.set(p.getX(i) - c[0], p.getY(i) - c[1], p.getZ(i) - c[2]);
-      const w = sstep(0.03, 0.0, Math.abs(v.length() - r)) * (side ? sstep(0.0, 0.08, v.x * side) : 1);
-      if (w <= 0) continue;
-      v.normalize(); m.set(n.getX(i), n.getY(i), n.getZ(i)).lerp(v, w).normalize();
-      n.setXYZ(i, m.x, m.y, m.z);
-    }
-    n.needsUpdate = true;
-  };
-  ballNormals(bodyGeo, R.shoulderL, R.ballR, -1); ballNormals(bodyGeo, R.shoulderR, R.ballR, 1);
-  squash.add(new THREE.Mesh(bodyGeo, bodyMat));
 
-  // arms: each grows out of a shoulder ball that is part of the body and turns about the ball's center, so the shoulder
-  // looks the same in any pose. They're rigid, like the toy's: the elbow and wrist only mark points along the arm (for
-  // the hand guard and held props), and the actions' elbow and wrist bends are folded into the shoulder's swing.
-  const armMats = [vinyl(WHITE()), vinyl(BLUE())];
-  const armIdx = Array.from(dec(data.arm.idx, Uint16Array));
+  // arms: each turns about its shoulder, rigid like the toy's. The shoulder, elbow and wrist here only mark points along
+  // the arm (for the hand guard and held props); the actions' elbow and wrist bends are folded into the shoulder's swing.
+  const ARM_TILT = (R.armTilt * Math.PI) / 180;
   const makeArm = (s) => {
-    const g = geo(data.arm, armIdx, null, s < 0 ? data.arm.ao : data.arm.aoR);
-    ballNormals(g, [0, 0, 0], R.ballR, 0);
-    const shoulder = new THREE.Group();
+    const shoulder = new THREE.Group(), elbow = new THREE.Group(), wrist = new THREE.Group();
     shoulder.position.fromArray(s < 0 ? R.shoulderL : R.shoulderR);
-    shoulder.add(new THREE.Mesh(g, armMats[s < 0 ? 0 : 1]));
-    const elbow = new THREE.Group(), wrist = new THREE.Group();
     elbow.position.y = -0.36; wrist.position.y = -0.18;
     shoulder.add(elbow); elbow.add(wrist);
     squash.add(shoulder);
-    return { shoulder, elbow, wrist };
+    return { s, shoulder, elbow, wrist };
   };
   const armL = makeArm(-1), armR = makeArm(1);
-  const ARM_TILT = (R.armTilt * Math.PI) / 180;
+
+  // body: the torso, legs and arms are one soft surface, drawn straight from the distance field Blender built it from
+  // (mini-yaz/blender/build_miniyaz.py): the torso is a column with a smooth outline (a table of distances), the legs
+  // and arms are cones with round ends, and each joins the torso with a smooth union. Each arm is placed where it is
+  // now, so the shoulder's blend is exact in every pose: nothing tears, stretches or webs when an arm goes up.
+  // The body is rasterized as a box around it; in each pixel the shader walks along the view ray until it meets the
+  // surface (sphere tracing), then lights that point like any other vinyl part. Its soft shadows are measured from the
+  // field too (the head's included, from a stand-in), so they follow the arms.
+  const SH = data.shape, TO = SH.torso, LG = SH.legs, AR = SH.arm, HD = SH.head;
+  const torsoTex = new THREE.DataTexture(dec(SH.torsoD, Uint16Array), TO.n[0], TO.n[1], THREE.RedFormat, THREE.HalfFloatType);
+  torsoTex.minFilter = torsoTex.magFilter = THREE.LinearFilter;
+  torsoTex.wrapS = torsoTex.wrapT = THREE.ClampToEdgeWrapping;
+  torsoTex.needsUpdate = true;
+  const num = (v) => (+v).toFixed(6);       // a number for the shader
+  const BU = {
+    uTorso: { value: torsoTex }, uCam: { value: new THREE.Vector3() }, uPix: { value: 0.001 },
+    uBoxMin: { value: new THREE.Vector3() }, uBoxMax: { value: new THREE.Vector3() },
+    uArmS: { value: [new THREE.Vector3(), new THREE.Vector3()] }, uArmW: { value: [new THREE.Vector3(), new THREE.Vector3()] }, uArmH: { value: [new THREE.Vector3(), new THREE.Vector3()] },
+    uHeadInv: { value: new THREE.Matrix4() }, uAoK: { value: LOOK.aoK }, uWire: { value: 0 }
+  };
+  const march = {
+    uniforms: BU,
+    head: `varying vec3 vBox;
+vec3 vObj, rmNormal; float vAO, rmX, rmCov;
+#define SPLIT_X rmX
+uniform mat4 modelViewMatrix, projectionMatrix;
+uniform mat3 normalMatrix;
+uniform sampler2D uTorso;
+uniform vec3 uCam, uBoxMin, uBoxMax, uArmS[2], uArmW[2], uArmH[2];
+uniform float uPix, uAoK, uWire;
+uniform mat4 uHeadInv;
+float smin(float a, float b, float k) { float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0); return mix(b, a, h) - k * h * (1.0 - h); }
+float sdRoundCone(vec3 p, vec3 a, vec3 b, float r1, float r2) {
+  vec3 ba = b - a; float l2 = dot(ba, ba), rr = r1 - r2, a2 = l2 - rr * rr, il2 = 1.0 / l2;
+  vec3 pa = p - a; float y = dot(pa, ba), z = y - l2;
+  vec3 w = pa * l2 - ba * y; float x2 = dot(w, w), y2 = y * y * l2, z2 = z * z * l2, k = sign(rr) * rr * rr * x2;
+  if (sign(z) * a2 * z2 > k) return sqrt(x2 + z2) * il2 - r2;
+  if (sign(y) * a2 * y2 < k) return sqrt(x2 + y2) * il2 - r1;
+  return (sqrt(x2 * a2 * il2) + y * rr) * il2 - r1;
+}
+// the torso: a column around an axis ${num(TO.y)} behind the center, ${num(TO.depth)} as deep as it is wide; its outline's
+// signed distance is tabled over (distance from the axis, height)
+float sdTorso(vec3 p) {
+  vec2 c = vec2(length(vec2(p.x, (-p.z - ${num(TO.y)}) / ${num(TO.depth)})), p.y - ${num(TO.z0)}) / ${num(TO.res)};
+  vec2 cc = clamp(c, vec2(0.0), vec2(${num(TO.n[0] - 1)}, ${num(TO.n[1] - 1)}));
+  return texture(uTorso, (cc + 0.5) / vec2(${num(TO.n[0])}, ${num(TO.n[1])})).r + length(c - cc) * ${num(TO.res)};
+}
+// the legs: wide at the hip, small round feet, a little longer than wide, flat where they stand
+float sdLegs(vec3 p) {
+  vec3 q = vec3(p.x, p.y, -${num(TO.y)} + (p.z + ${num(TO.y)}) / ${num(LG.long)});
+  float a = sdRoundCone(q, vec3(${num(-LG.hip[0])}, ${num(LG.hip[2])}, ${num(-LG.hip[1])}), vec3(${num(-LG.foot[0])}, ${num(LG.foot[2])}, ${num(-LG.foot[1])}), ${num(LG.hip[3])}, ${num(LG.foot[3])});
+  float b = sdRoundCone(q, vec3(${num(LG.hip[0])}, ${num(LG.hip[2])}, ${num(-LG.hip[1])}), vec3(${num(LG.foot[0])}, ${num(LG.foot[2])}, ${num(-LG.foot[1])}), ${num(LG.hip[3])}, ${num(LG.foot[3])});
+  return -smin(-smin(a, b, ${num(LG.crotch)}), p.y, ${num(LG.ground)});
+}
+// an arm, where it is now: a cone with round ends from the shoulder to the wrist, joined to the mitten
+float sdArm(vec3 p, vec3 s, vec3 w, vec3 h) { return smin(sdRoundCone(p, s, w, ${num(AR.rShoulder)}, ${num(AR.rWrist)}), length(p - h) - ${num(AR.rHand)}, ${num(AR.kHand)}); }
+// the whole body; cx: where it sits for the two colors (the torso splits down the middle, each arm keeps its side's color)
+float sdBody(vec3 p, out float cx) {
+  float d = smin(sdTorso(p), sdLegs(p), ${num(LG.k)});
+  float k = mix(${num(AR.kLow)}, ${num(AR.k)}, smoothstep(${num(AR.kFrom)}, ${num(AR.kTo)}, p.y));   // the fillet narrows below the armpit
+  float a = sdArm(p, uArmS[0], uArmW[0], uArmH[0]);
+  float h = clamp(0.5 + 0.5 * (a - d) / k, 0.0, 1.0);
+  d = mix(a, d, h) - k * h * (1.0 - h); cx = mix(-1.0, p.x, h);
+  a = sdArm(p, uArmS[1], uArmW[1], uArmH[1]);
+  h = clamp(0.5 + 0.5 * (a - d) / k, 0.0, 1.0);
+  d = mix(a, d, h) - k * h * (1.0 - h); cx = mix(1.0, cx, h);
+  return d;
+}
+float sdf(vec3 p) { float cx; return sdBody(p, cx); }
+// the head, for its shadow: an egg as wide as the head, flat underneath, turned with the head
+float sdHead(vec3 p) {
+  vec3 q = (uHeadInv * vec4(p, 1.0)).xyz - vec3(0.0, ${num(HD.center - NECK[1])}, 0.0);
+  vec3 r = vec3(${num(HD.width)}, q.y > 0.0 ? ${num(HD.up)} : ${num(HD.down)}, ${num(HD.width * HD.depth)});
+  float k0 = length(q / r), k1 = length(q / (r * r));
+  return max(k0 * (k0 - 1.0) / k1, ${num(HD.bottom - HD.center)} - q.y);
+}
+`,
+    main: `  {
+    vec3 rd = normalize(vBox - uCam);
+    float t = distance(vBox, uCam);
+    vec3 ta = (uBoxMin - uCam) / rd, tb = (uBoxMax - uCam) / rd, tf = max(ta, tb);
+    float tEnd = min(min(tf.x, tf.y), tf.z), best = 1e9, tBest = t;
+    bool hit = false;
+    for (int i = 0; i < 90; i++) {
+      float d = sdf(uCam + rd * t), px = uPix * t;
+      if (d < best * px) { best = d / px; tBest = t; }
+      if (d < 0.04 * px) { hit = true; tBest = t; break; }
+      t += d * 0.95;
+      if (t > tEnd) break;
+    }
+    // just past the edge, the pixel is partly covered: it fades out over a pixel, so the outline is smooth
+    rmCov = hit ? 1.0 : 1.0 - smoothstep(0.0, 1.0, best);
+    if (rmCov <= 0.0) discard;
+    vec3 p = uCam + rd * tBest;
+    const vec2 e = vec2(1.0, -1.0) * 0.0046;
+    vec3 n = normalize(e.xyy * sdf(p + e.xyy) + e.yyx * sdf(p + e.yyx) + e.yxy * sdf(p + e.yxy) + e.xxx * sdf(p + e.xxx));
+    sdBody(p, rmX);
+    // soft shadow: how much of the space off the surface (out to about a third of a unit) is taken up by the body or
+    // the head above it, nearer space counting a little more
+    float oc = 0.0;
+    for (int i = 0; i < 5; i++) {
+      float h = 0.03 + 0.085 * float(i);
+      vec3 q = p + n * h;
+      oc += clamp((h - min(sdf(q), sdHead(q))) / h, 0.0, 1.0) * (1.0 - 0.1 * float(i));
+    }
+    vAO = clamp(1.0 - uAoK * oc * 0.25, 0.0, 1.0);
+    vObj = p;
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    rmView = -mv.xyz;
+    rmNormal = normalize(normalMatrix * n);
+    vec4 cp = projectionMatrix * mv;
+    gl_FragDepth = 0.5 + 0.5 * cp.z / cp.w;
+    // the Lab's wireframe: contour lines where the surface crosses a grid
+    if (uWire > 0.5) {
+      vec3 g = p / 0.06, gw = fwidth(g) + 1e-4, l = 1.0 - smoothstep(vec3(0.0), gw * 1.5, abs(fract(g - 0.5) - 0.5));
+      rmCov *= max(l.x, max(l.y, l.z));
+      if (rmCov < 0.02) discard;
+    }
+  }
+`
+  };
+  const bodyMat = vinyl(WHITE(), BLUE(), { march });
+  bodyMat.transparent = true;            // the outline's partly covered pixels blend over whatever is behind
+  const bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), bodyMat);
+  bodyMesh.frustumCulled = false;
+  squash.add(bodyMesh);
+  // the box the rays start in: around the torso and legs (from the table and the legs' numbers), and each arm where it is
+  const trunkBox = (() => {
+    let rMax = 0, y1 = -1e9;
+    const t = dec(SH.torsoD, Uint16Array), [nr, nh] = TO.n;
+    const inside = (h) => h >> 15 && (h & 0x7fff);            // a half float's sign bit (and not -0)
+    for (let j = 0; j < nh; j++) for (let i = 0; i < nr; i++) if (inside(t[j * nr + i])) { rMax = Math.max(rMax, i * TO.res); y1 = Math.max(y1, TO.z0 + j * TO.res); }
+    const pad = LG.k / 4 + 0.03, lx = Math.max(LG.hip[0] + LG.hip[3], LG.foot[0] + LG.foot[3]), lz = LG.hip[3] * LG.long;
+    return [new THREE.Vector3(-Math.max(rMax, lx) - pad, -0.02, -TO.y - Math.max(rMax * TO.depth, lz) - pad),
+      new THREE.Vector3(Math.max(rMax, lx) + pad, y1 + pad, -TO.y + Math.max(rMax * TO.depth, lz) + pad)];
+  })();
+  const armW = new THREE.Vector3(0, -AR.wrist, 0), armH = new THREE.Vector3(0, -AR.hand, 0);
+  const bv = new THREE.Vector3(), bufSize = new THREE.Vector2(), bodyInv = new THREE.Matrix4();
+  bodyMesh.onBeforeRender = (r, s, cam) => {
+    const lo = BU.uBoxMin.value.copy(trunkBox[0]), hi = BU.uBoxMax.value.copy(trunkBox[1]);
+    const grow = (p, rad) => { lo.min(bv.copy(p).subScalar(rad)); hi.max(bv.copy(p).addScalar(rad)); };
+    [armL, armR].forEach((a, i) => {
+      const S = BU.uArmS.value[i].copy(a.shoulder.position), W = BU.uArmW.value[i], H = BU.uArmH.value[i];
+      W.copy(armW).applyMatrix4(a.shoulder.matrix); H.copy(armH).applyMatrix4(a.shoulder.matrix);
+      const pad = AR.k / 4 + 0.03;
+      grow(S, AR.rShoulder + pad); grow(W, AR.rWrist + pad); grow(H, AR.rHand + pad);
+    });
+    BU.uHeadInv.value.multiplyMatrices(neck.matrix, head.matrix).invert();
+    bodyInv.copy(bodyMesh.matrixWorld).invert();
+    BU.uCam.value.setFromMatrixPosition(cam.matrixWorld).applyMatrix4(bodyInv);
+    r.getDrawingBufferSize(bufSize);
+    BU.uPix.value = (2 * Math.tan((cam.fov * Math.PI) / 360)) / Math.max(1, bufSize.y) / squash.scale.y;
+  };
 
   // head: pivots at the neck; the headphones and the face ride along
   const neck = new THREE.Group();
@@ -231,6 +374,8 @@ export function createMiniYaz(THREE, host, data, opts) {
   neck.add(head);
   const headMat = vinyl(BLUE(), WHITE(), { face: true, profile: true, split: [SPLIT.top, SPLIT.low, SPLIT.step - NECK[1], 0.012] });
   const headGeo = geo(data.head, loftIndex(data.head.rings), NECK);
+  // the head's baked shading, with the headphones' soft shadow and without (for when a headset takes their place)
+  const headAo = { phones: Uint8Array.from(headGeo.attributes.ao.array), bare: data.head.aoBare ? Uint8Array.from(dec(data.head.aoBare, Uint8Array)) : null };
   head.add(new THREE.Mesh(headGeo, headMat));
   { const e = data.eyes[1].s; faceUni.uEyeS.value.set(e[0] * LOOK.eyeW, e[1], e[0] * LOOK.eyeW); }
   // headphones: they ride on the head
@@ -249,6 +394,29 @@ export function createMiniYaz(THREE, host, data, opts) {
   const inkMat = new THREE.MeshPhysicalMaterial({ color: 0x0d0c0d, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.06, specularIntensity: 0.5, envMapIntensity: LOOK.eyeGloss });   // glossy beads
   const glintMat = new THREE.MeshBasicMaterial({ color: 0xf1f3f6, toneMapped: false });
   const lineMat = new THREE.MeshStandardMaterial({ color: 0x1b1a1d, roughness: 0.4 });
+  // a stroke along a curve that tapers from r0 at its root to r1 at its tip
+  const taper = (curve, r0, r1) => {
+    const N = 12, S = 8, pos = [], idx = [];
+    const fr = curve.computeFrenetFrames(N, false);
+    for (let i = 0; i <= N; i++) {
+      const u = i / N, p = curve.getPointAt(u), r = r0 + (r1 - r0) * Math.pow(u, 0.85), n = fr.normals[i], b = fr.binormals[i];
+      for (let j = 0; j < S; j++) {
+        const a = (j / S) * Math.PI * 2, c = Math.cos(a) * r, sn = Math.sin(a) * r;
+        pos.push(p.x + c * n.x + sn * b.x, p.y + c * n.y + sn * b.y, p.z + c * n.z + sn * b.z);
+      }
+    }
+    const tip = curve.getPointAt(1).addScaledVector(fr.tangents[N], r1);
+    pos.push(tip.x, tip.y, tip.z);
+    for (let i = 0; i < N; i++) for (let j = 0; j < S; j++) {
+      const a = i * S + j, b = i * S + (j + 1) % S, c = a + S, d = b + S;
+      idx.push(a, c, b, b, c, d);
+    }
+    for (let j = 0; j < S; j++) idx.push(N * S + j, (N + 1) * S, N * S + (j + 1) % S);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx); g.computeVertexNormals();
+    return g;
+  };
   const makeEye = (e) => {
     const holder = new THREE.Group();
     holder.position.set(e.p[0] - HC[0], e.p[1] - HC[1], e.p[2] - HC[2]);
@@ -277,23 +445,27 @@ export function createMiniYaz(THREE, host, data, opts) {
     // asleep: the arch turns over into a soft "u"
     const sleepPts = arcPts.map((q) => new THREE.Vector3(q.x, -q.y - e.s[1] * 0.1, q.z));
     const sleepArc = line(sleepPts, 0.013);
-    // lashes: two little flicks at the outer corner, on the open eye and on both closed shapes
+    // lashes: two little flicks at the outer corner, on the open eye and on both closed shapes. Each is a tapered stroke
+    // (round at the root, fine at the tip) that grows out of the rim and curls outward at the end.
     const out = Math.sign(e.p[0] - HC[0]) || 1, rx = e.s[0] * LOOK.eyeW, ry = e.s[1];
-    const lash = (parent, x, y, z, dx, dy, len) => {
-      const d = new THREE.Vector2(dx, dy).normalize(), L = len * LOOK.lash, r = 0.0085;
-      const pts = [new THREE.Vector3(x, y, z), new THREE.Vector3(x + d.x * L * 0.55, y + d.y * L * 0.55, z), new THREE.Vector3(x + d.x * L + out * 0.1 * L, y + d.y * L + 0.22 * L, z)];
-      const g = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 8, r, 8, false), lineMat);
-      const tip = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 6), lineMat); tip.position.copy(pts[2]); g.add(tip);
+    const lash = (parent, x, y, z, dx, dy, len, curl) => {
+      const d = new THREE.Vector2(dx, dy).normalize(), L = len * LOOK.lash;
+      const root = new THREE.Vector3(x, y, z);
+      const mid = new THREE.Vector3(x + d.x * L * 0.6, y + d.y * L * 0.6, z + 0.002);
+      const tip = new THREE.Vector3(x + d.x * L * 0.8 + out * curl * L, y + d.y * L * 0.8 - 0.25 * curl * L * Math.sign(d.y || 1), z + 0.003);
+      const g = new THREE.Mesh(taper(new THREE.QuadraticBezierCurve3(root, mid, tip), 0.0105, 0.0022), lineMat);
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.0105, 10, 8), lineMat); cap.position.copy(root); g.add(cap);
+      g.userData.lash = true;
       parent.add(g);
     };
-    [[42, 0.058], [72, 0.046]].forEach(([deg, len]) => {   // out from the rim, tipped up a little
+    [[36, 0.064, 0.32], [66, 0.052, 0.38]].forEach(([deg, len, curl]) => {   // out from the rim, tipped up a little
       const a = deg * Math.PI / 180, nx = out * Math.sin(a) / rx, ny = Math.cos(a) / ry;
-      lash(lid, out * rx * Math.sin(a), ry * Math.cos(a), 0.013, nx, ny + 0.6 * Math.hypot(nx, ny), len);
+      lash(lid, out * rx * Math.sin(a), ry * Math.cos(a), 0.013, nx, ny + 0.5 * Math.hypot(nx, ny), len, curl);
     });
-    lash(arc, out * w * 0.9, ry * (0.25 - 0.5 * 0.81), e.s[2] * 0.7, out * 0.9, 0.45, 0.052);
-    lash(arc, out * w * 0.62, ry * (0.25 - 0.5 * 0.384), e.s[2] * 0.7, out * 0.55, 0.85, 0.044);
-    lash(sleepArc, out * w * 0.9, ry * (0.5 * 0.81 - 0.35), e.s[2] * 0.7, out * 0.75, -0.65, 0.05);
-    lash(sleepArc, out * w * 0.6, ry * (0.5 * 0.36 - 0.35), e.s[2] * 0.7, out * 0.3, -0.95, 0.042);
+    lash(arc, out * w * 0.9, ry * (0.25 - 0.5 * 0.81), e.s[2] * 0.7, out * 0.9, 0.5, 0.056, 0.3);
+    lash(arc, out * w * 0.6, ry * (0.25 - 0.5 * 0.36), e.s[2] * 0.7, out * 0.5, 0.86, 0.046, 0.35);
+    lash(sleepArc, out * w * 0.9, ry * (0.5 * 0.81 - 0.35), e.s[2] * 0.7, out * 0.75, -0.65, 0.052, 0.3);
+    lash(sleepArc, out * w * 0.6, ry * (0.5 * 0.36 - 0.35), e.s[2] * 0.7, out * 0.3, -0.95, 0.044, 0.35);
     // dizzy: a spiral where the eye was
     const spiralPts = [];
     for (let i = 0; i <= 64; i++) { const a = i / 64 * Math.PI * 5.2, r = 0.008 + (i / 64) * e.s[0] * 1.15 * LOOK.eyeW; spiralPts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r * 1.15, e.s[2] * 0.72)); }
@@ -308,10 +480,26 @@ export function createMiniYaz(THREE, host, data, opts) {
     const P0 = S0.map((p) => [mid[0] + (p[0] - mid[0]) * LOOK.mouthW, p[1], p[2] + 0.003]);   // LOOK.mouthW scales its width
     smile.position.set(mid[0] - NECK[0], mid[1] - NECK[1], mid[2] - NECK[2]);
     const pts = P0.map((p) => new THREE.Vector3(p[0] - mid[0], p[1] - mid[1], p[2] - mid[2]));
-    smile.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, LOOK.mouthR, 12, false), lineMat));
-    [pts[0], pts[pts.length - 1]].forEach((q) => { const c = new THREE.Mesh(new THREE.SphereGeometry(LOOK.mouthR, 14, 10), lineMat); c.position.copy(q); smile.add(c); });
+    // a fine line, and a bolder one for small sizes
+    [1, 1.8].forEach((k) => {
+      const g = new THREE.Group(), r = LOOK.mouthR * k;
+      g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, r, 12, false), lineMat));
+      [pts[0], pts[pts.length - 1]].forEach((q) => { const c = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), lineMat); c.position.copy(q); g.add(c); });
+      g.userData.bold = k > 1; g.visible = k === 1;
+      smile.add(g);
+    });
     head.add(smile);
   }
+  // small sizes (the peek icon, anything under ~170 px tall): the lashes would turn to specks, so they go, and the
+  // smile is drawn bolder
+  let small = null;
+  const setSmall = (on) => {
+    if (on === small) return;
+    small = on;
+    gaze.traverse((o) => { if (o.userData.lash) o.visible = !on; });
+    smile.children.forEach((g) => { g.visible = g.userData.bold === on; });
+  };
+  setSmall(!!opts.small);
   // an open, happy "D" mouth for big moments. It is wrapped onto the face (each point found by casting a ray at the
   // head), and opens by sliding from the smile's top line down to the full shape.
   const headMesh = head.children[0];
@@ -377,6 +565,7 @@ export function createMiniYaz(THREE, host, data, opts) {
   const blob = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.75), new THREE.MeshBasicMaterial({ map: blobTex, color: 0x10306b, transparent: true, opacity: 0.32, depthWrite: false }));
   blob.rotation.x = -Math.PI / 2;
   blob.position.y = 0.002;
+  blob.renderOrder = -1;                  // under the body's soft outline, so it shows through it
   scene.add(blob);
   const setDark = (dark) => {
     blob.material.color.set(dark ? 0x000000 : 0x10306b);
@@ -562,7 +751,12 @@ export function createMiniYaz(THREE, host, data, opts) {
   };
   const props = {};
   (opts.props || []).forEach((name) => { if (PROPS[name]) props[name] = PROPS[name](); });
-  headphones.visible = !props.visor;       // the headset takes the headphones' place
+  // the headset takes the headphones' place
+  const wearPhones = (on) => {
+    headphones.visible = on;
+    if (headAo.bare) { headGeo.attributes.ao.array.set(on ? headAo.phones : headAo.bare); headGeo.attributes.ao.needsUpdate = true; }
+  };
+  wearPhones(!props.visor);
 
   // ---------- motion engine ----------
   const bez = (x1, y1, x2, y2) => {
@@ -628,36 +822,35 @@ export function createMiniYaz(THREE, host, data, opts) {
     o.sy += flow(t, [[0, 0], [a - 30, -0.09], [a + 60, 0.075], [(a + b) / 2, 0], [b - 20, 0.05], [b + 25, -0.16], [b + 130, -0.02], [b + 300, 0]]);
     o.mouth = Math.max(o.mouth, flow(t, [[0, 0], [a - 10, 0], [a + 90, 1], [b + 180, 1], [b + 420, 0]]));
     o.hPitch += flow(t, [[0, 0], [a - 20, 4 * D], [a + 70, -5 * D], [b + 30, 6 * D], [b + 260, 0]]);
-    o.aLz += flow(t, [[0, 0], [a - 20, 3 * D], [a + 100, -28 * D], [b - 40, -10 * D], [b + 40, -22 * D], [b + 260, 0]]);
-    o.aRz += flow(t, [[0, 0], [a - 20, -3 * D], [a + 110, 30 * D], [b - 30, 10 * D], [b + 50, 24 * D], [b + 280, 0]]);
+    // the arms lift a little in the air (their weight does the rest: they trail the takeoff and drop on landing)
+    o.aLz += flow(t, [[0, 0], [a - 20, 3 * D], [a + 110, -13 * D], [b - 30, -6 * D], [b + 200, 0]]);
+    o.aRz += flow(t, [[0, 0], [a - 20, -3 * D], [a + 120, 14 * D], [b - 20, 6 * D], [b + 220, 0]]);
     o.happy = Math.max(o.happy, flow(t, [[0, 0], [a, 0], [a + 120, 1], [b + 200, 1], [b + 500, 0]]));
     return o;
   };
   const waveHi = (t, o) => {
-    // turn to face you, raise the near-side arm out past the cheek, and wave it from the shoulder.
-    // Each part's wiggle starts from zero and eases in, so the hand never jumps.
-    const P = 440;
-    const w = (lag) => { const tt = t - lag; return Math.sin(((tt - 470) / P) * Math.PI * 2) * seg(tt, 470, 800, 'inOut') * (1 - seg(tt, 1950, 2200, 'inOut')); };
+    // turn to face you, dip the near arm, swing it up beside the cheek (rigid, from the shoulder, a little forward so
+    // the hand passes clear of the head) and rock it side to side, the body swaying along. The rock starts from zero
+    // and eases in and out, so the hand never jumps; the arm's weight (swingArms) adds the follow-through.
+    const P = 460;
+    const rock = (lag) => { const tt = t - lag; return Math.sin(((tt - 500) / P) * Math.PI * 2) * seg(tt, 500, 760, 'inOut') * (1 - seg(tt, 1880, 2180, 'inOut')); };
     o.yaw += flow(t, [[0, 0], [320, -BASE_YAW], [2200, -BASE_YAW], [2600, 0]]);
-    o.aRz += flow(t, [[0, 0], [110, -6 * D], [450, 90 * D], [2150, 90 * D], [2600, 0]]) + 6 * D * w(0);
-    o.aRx += flow(t, [[0, 0], [220, 34 * D], [450, 58 * D], [2150, 58 * D], [2450, 30 * D], [2650, 0]]);   // forward first, so the hand rises clear of the head
-    o.eR += flow(t, [[0, 0], [320, 10 * D], [470, 34 * D], [2150, 34 * D], [2600, 0]]) + 12 * D * w(90);
-    o.wR += flow(t, [[0, 0], [470, 8 * D], [2150, 8 * D], [2600, 0]]) + 30 * D * w(170);   // three lagging wiggles add up to a rolling swing
-    const bounce = seg(t, 470, 800, 'inOut') * (1 - seg(t, 1950, 2200, 'inOut'));
-    o.y += 0.022 * (0.5 - 0.5 * Math.cos(((t - 470) / P) * Math.PI * 2)) * bounce;
-    o.mouth = flow(t, [[0, 0], [420, 0], [600, 1], [2050, 1], [2350, 0]]);   // forearm up beside the face; the hand trails the arm
-    o.aLz += flow(t, [[0, 0], [430, -8 * D], [2150, -8 * D], [2600, 0]]);
-    o.hRoll += flow(t, [[0, 0], [300, 0], [600, -7 * D], [2150, -7 * D], [2600, 0]]) + 1.6 * D * w(60);
-    o.lean += flow(t, [[0, 0], [500, 2 * D], [2150, 2 * D], [2600, 0]]);
-    o.sy += flow(t, [[0, 0], [110, -0.03], [300, 0.025], [520, 0]]) + 0.008 * w(30);
+    o.aRz += flow(t, [[0, 0], [130, -7 * D], [500, 100 * D], [2180, 100 * D], [2600, 0]]) + 12 * D * rock(0);
+    o.aRx += flow(t, [[0, 0], [240, 30 * D], [500, 44 * D], [2180, 44 * D], [2450, 22 * D], [2650, 0]]) + 4 * D * rock(-P / 4);
+    o.aLz += flow(t, [[0, 0], [430, -6 * D], [2150, -6 * D], [2600, 0]]) - 3 * D * rock(60);
+    o.y += 0.02 * (0.5 - 0.5 * Math.cos(((t - 500) / P) * Math.PI * 4)) * seg(t, 500, 760, 'inOut') * (1 - seg(t, 1880, 2180, 'inOut'));
+    o.mouth = flow(t, [[0, 0], [420, 0], [600, 1], [2050, 1], [2350, 0]]);
+    o.hRoll += flow(t, [[0, 0], [300, 0], [600, -7 * D], [2150, -7 * D], [2600, 0]]) + 2 * D * rock(80);
+    o.lean += flow(t, [[0, 0], [500, 2 * D], [2150, 2 * D], [2600, 0]]) + 1.2 * D * rock(40);
+    o.sy += flow(t, [[0, 0], [130, -0.03], [320, 0.025], [540, 0]]) + 0.008 * rock(30);
     o.happy = Math.max(o.happy, flow(t, [[0, 0], [380, 0], [560, 1], [2100, 1], [2500, 0]]));
     o.face += flow(t, [[0, 0], [320, 1], [2200, 1], [2600, 0]]);       // eyes and head come back to you
     return o;
   };
   const spinA = (t) => {
     const o = hop(t, 170, 800, 0.4, zero());
-    o.aLz += flow(t, [[0, 0], [320, -30 * D], [720, -24 * D], [860, -8 * D], [1100, 0]]);   // arms fling out in the turn
-    o.aRz += flow(t, [[0, 0], [320, 32 * D], [720, 25 * D], [870, 9 * D], [1120, 0]]);
+    o.aLz += flow(t, [[0, 0], [320, -8 * D], [760, -6 * D], [1100, 0]]);   // the turn itself lifts the arms out
+    o.aRz += flow(t, [[0, 0], [320, 9 * D], [770, 6 * D], [1120, 0]]);
     o.yaw += Math.PI * 2 * EASE_SPIN(clamp((t - 180) / 660, 0, 1));
     o.lid = Math.max(o.lid, track(t - 90, BLINK));
     return o;
@@ -696,8 +889,8 @@ export function createMiniYaz(THREE, host, data, opts) {
   const startleA = (t) => {
     const o = hop(t, 40, 300, 0.2, zero());
     o.spark = flow(t, [[0, 0], [60, 1], [900, 1], [1300, 0]]);
-    o.aLz += flow(t, [[0, 0], [90, -0.7], [500, -0.3], [1100, 0]]);
-    o.aRz += flow(t, [[0, 0], [90, 0.7], [520, 0.3], [1120, 0]]);
+    o.aLz += flow(t, [[0, 0], [90, -0.45], [500, -0.2], [1100, 0]]);
+    o.aRz += flow(t, [[0, 0], [90, 0.45], [520, 0.2], [1120, 0]]);
     o.hYaw += flow(t, [[0, 0], [380, 0], [520, 0.22], [700, -0.22], [860, 0.1], [1000, 0]]);
     o.happy = 0;
     o.mouth = flow(t, [[0, 0], [60, 0.8], [500, 0.8], [800, 0]]);
@@ -734,7 +927,7 @@ export function createMiniYaz(THREE, host, data, opts) {
     sp: { yaw: S(), pitch: S(), body: S(), happy: S(), lean: S(), mouth: S(), spark: S() },
     drag: null, dragYaw: S(), dragVel: 0, lastDragEnd: -1e9,
     press: S(), pressTo: 0, scrollKick: 0, lastScrollY: typeof window !== 'undefined' ? window.scrollY : 0,
-    sleep: S(), asleep: false, lastInput: 0, taps: [], focus: null, oohUntil: -1e9,
+    sleep: S(), asleep: false, lastInput: 0, taps: [], focus: null, oohUntil: -1e9, arms: null,
     paused: !!opts.paused, ema: 16, slowFor: 0, lastFrame: 0,
     st: { point: { x: STANCE === 'point' ? 1 : 0, v: 0 }, cheer: { x: STANCE === 'cheer' ? 1 : 0, v: 0 }, lost: { x: STANCE === 'lost' ? 1 : 0, v: 0 } },
     base: { x: BASE_YAW, v: 0 }
@@ -880,7 +1073,41 @@ export function createMiniYaz(THREE, host, data, opts) {
     P.lid = Math.max(lid, sstep(0.15, 0.55, zz)); P.happy = happy;
     P.mouth = spring(m.sp.mouth, clamp(P.mouth, 0, 1), 16, dts);
     P.press = spring(m.press, m.pressTo, 26, dts);
+    swingArms(P, dts);
     return P;
+  };
+
+  // The arms have a little weight. Each swings on a soft spring toward its pose, so it trails a quick move and
+  // settles with a small overshoot, and the body's own motion moves it: the arms lag as Mini Yaz takes off, float up in
+  // the air and drop on landing, trail and lift out in a spin, and swing against a quick lean. (The actions' elbow and
+  // wrist bends are folded into the swing here: the arms are rigid.)
+  const ARM_W = 2 * Math.PI * 3.0, ARM_ZETA = 0.5;
+  const swingArms = (P, dts) => {
+    const yaw = m.base.x + P.yaw;
+    let A = m.arms;
+    if (!A || reduced || m.paused) {
+      A = m.arms = { y: P.y, vy: 0, ay: 0, yaw, vw: 0, w: 0, aw: 0, lean: P.lean, vl: 0, al: 0, L: null, R: null };
+    }
+    if (dts > 0) {                                               // the body's motion, smoothed over a few frames
+      const k = 1 - Math.exp(-dts / 0.04), vy = (P.y - A.y) / dts, vw = (yaw - A.yaw) / dts, vl = (P.lean - A.lean) / dts;
+      A.ay += ((vy - A.vy) / dts - A.ay) * k; A.aw += ((vw - A.vw) / dts - A.aw) * k; A.al += ((vl - A.vl) / dts - A.al) * k;
+      A.w += (vw - A.w) * k;
+      A.vy = vy; A.vw = vw; A.vl = vl; A.y = P.y; A.yaw = yaw; A.lean = P.lean;
+    }
+    const fling = 0.42 * Math.tanh(0.0018 * A.w * A.w);           // a spin lifts the arms out
+    [['L', -1], ['R', 1]].forEach(([n, s]) => {
+      const tz = P['a' + n + 'z'] + P['e' + n] + 0.5 * P['w' + n] + s * fling, tx = P['a' + n + 'x'];
+      let a = A[n];
+      if (!a) a = A[n] = { z: tz, vz: 0, x: tx, vx: 0 };
+      // pushes from the body: up and down (as weight), the spin's speeding up and slowing down, a lean
+      const fz = -s * clamp(0.7 * A.ay, -60, 60) - clamp(1.0 * A.al, -40, 40), fx = -s * clamp(0.12 * A.aw, -30, 30);
+      for (let left = dts; left > 1e-6; left -= 1 / 120) {
+        const h = Math.min(left, 1 / 120);
+        a.vz += (ARM_W * ARM_W * (tz - a.z) - 2 * ARM_ZETA * ARM_W * a.vz + fz) * h; a.z += a.vz * h;
+        a.vx += (ARM_W * ARM_W * (tx - a.x) - 2 * ARM_ZETA * ARM_W * a.vx + fx) * h; a.x += a.vx * h;
+      }
+      P['a' + n + 'z'] = a.z; P['a' + n + 'x'] = a.x; P['e' + n] = 0; P['w' + n] = 0;
+    });
   };
 
   // a raised mitten must never sink into the head: test the hand against the head (padded by the hand's
@@ -966,6 +1193,7 @@ export function createMiniYaz(THREE, host, data, opts) {
     const w = Math.max(1, Math.round(r.width * (1 + 2 * EXTRA_SIDE))), h = Math.max(1, Math.round(r.height * (1 + EXTRA_TOP)));
     if (w === W && h === H && force !== true) return;
     W = w; H = h;
+    setSmall(opts.small ?? r.height < 170);
     renderer.setPixelRatio(Math.min(maxDpr, window.devicePixelRatio || 1));
     renderer.setSize(w, h, false);
     const visH = BOX_H * (1 + EXTRA_TOP), bottomY = -GROUND * BOX_H, centerY = bottomY + visH / 2;
@@ -1103,8 +1331,6 @@ export function createMiniYaz(THREE, host, data, opts) {
       key.intensity = LOOK.key; key.position.set(LOOK.keyX, LOOK.keyY, LOOK.keyZ); hemi.intensity = LOOK.hemi;
       bodyMat.userData.own.uColA.value.copy(WHITE()); bodyMat.userData.own.uColB.value.copy(BLUE());
       headMat.userData.own.uColA.value.copy(BLUE()); headMat.userData.own.uColB.value.copy(WHITE());
-      armMats[0].userData.own.uColA.value.copy(WHITE()); armMats[0].userData.own.uColB.value.copy(WHITE());
-      armMats[1].userData.own.uColA.value.copy(BLUE()); armMats[1].userData.own.uColB.value.copy(BLUE());
       [[phonesMat, LOOK.phones || C.phones], [padsMat, LOOK.pads || C.pads]].forEach(([mt, c]) => { mt.userData.own.uColA.value.copy(rgb(c)); mt.userData.own.uColB.value.copy(rgb(c)); });
       mats.forEach((mt) => {
         if (!mt.userData.fixed) mt.roughness = LOOK.rough;
@@ -1114,7 +1340,7 @@ export function createMiniYaz(THREE, host, data, opts) {
           mt.sheen = LOOK.pearl; mt.sheenColor.copy(rgb(LOOK.pearlColor)); mt.sheenRoughness = LOOK.pearlRough;
         }
       });
-      U.uAoPow.value = LOOK.aoPow; U.uAoDirect.value = LOOK.aoDirect; U.uSss.value = LOOK.sss; U.uEdge.value = LOOK.edge; U.uLift.value = LOOK.lift;
+      BU.uAoK.value = LOOK.aoK; U.uAoTint.value.fromArray(LOOK.aoTint); U.uAoPow.value = LOOK.aoPow; U.uAoDirect.value = LOOK.aoDirect; U.uSss.value = LOOK.sss; U.uEdge.value = LOOK.edge; U.uLift.value = LOOK.lift;
       mats.forEach((mt) => { const o = mt.userData.own; o.uLiftA.value.copy(liftOf(o.uColA.value)); o.uLiftB.value.copy(liftOf(o.uColB.value)); });
       inkMat.envMapIntensity = LOOK.eyeGloss;
       render();
@@ -1128,14 +1354,15 @@ export function createMiniYaz(THREE, host, data, opts) {
     setProp: (name, on) => {
       if (on && !props[name] && PROPS[name]) props[name] = PROPS[name]();
       if (props[name]) props[name].visible = !!on;
-      if (name === 'visor') headphones.visible = !on;
+      if (name === 'visor') wearPhones(!on);
       render(); wake();
     },
-    setWireframe: (on) => { scene.traverse((o) => { if (o.material && o.material !== blob.material) o.material.wireframe = !!on; }); render(); wake(); },
+    setWireframe: (on) => { scene.traverse((o) => { if (o.material && o.material !== blob.material && o.material !== bodyMat) o.material.wireframe = !!on; }); BU.uWire.value = on ? 1 : 0; render(); wake(); },
     sleepNow: () => { if (!m.act) { m.lastInput = m.t - SLEEP_AFTER; m.sleep.x = Math.max(m.sleep.x, 0.3); wake(); } },
     // test hooks
     step: (ms) => { const n = Math.round(ms / 16); for (let i = 0; i < n; i++) { m.t += 16; if (m.pending && m.t >= m.pending.at) { start(m.pending.kind); m.pending = null; } apply(pose(0.016)); } render(); },
     startNow: start,
+    arms: () => [armL.shoulder.rotation.x, armL.shoulder.rotation.z, armR.shoulder.rotation.x, armR.shoulder.rotation.z, root.position.y, root.rotation.y],
     pointAt: (x, y) => { m.ptr = { x, y, t: m.t }; },
     dispose: () => {
       m.dead = true;
@@ -1150,7 +1377,7 @@ export function createMiniYaz(THREE, host, data, opts) {
       window.removeEventListener('keydown', onKey);
       document.removeEventListener('visibilitychange', onVis);
       scene.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
-      blobTex.dispose(); pmrem.dispose(); renderer.dispose();
+      blobTex.dispose(); torsoTex.dispose(); pmrem.dispose(); renderer.dispose();
       canvas.remove();
     }
   };
