@@ -12,10 +12,11 @@ blender/build_miniyaz.py          builds the model in Blender             ->  bl
 ```
 
 The proportions in `build_miniyaz.py` (the head's width at every height, where the eyes and smile sit, where the
-blue-and-white line steps over at the nose) were measured from a front view of the Finder figure. The torso, arms and
-legs are one surface: distance fields (the limbs are round cones, wide at the joint and smaller at the end) blended
-with a smooth union and meshed with marching cubes. The body carries skin weights, so the browser bends the arms with a
-small skeleton (a shoulder, elbow and wrist each).
+blue-and-white line steps over at the nose) were measured from a front view of the Finder figure. The torso and
+legs are one surface: distance fields (the legs are round cones, wide at the hip and smaller at the foot) blended with
+a smooth union and meshed with marching cubes. Each shoulder is a ball in that surface; each arm is a separate round
+cone grown out of its ball, turning about the ball's center, so the shoulder looks the same in every pose. The arms are
+skinned to a shoulder, elbow and wrist bone.
 
 In the browser, `assets/mini-yaz/mascot.js` mounts every `.mini-yaz` on a page and `assets/mini-yaz/engine.js` draws and
 animates it with three.js (r169, trimmed to what's used in `assets/mini-yaz/three.min.js`). `miniyaz.json` is also the
@@ -62,7 +63,7 @@ channel offsets), props, and crop.
 ## Engine notes
 
 - One clock drives everything: idle breathing from slow sine waves, actions as keyframes on curves that never
-  overshoot, and attention (eyes, then head, then body) on critically damped springs.
+  overshoot, and attention (the head, then the body) on critically damped springs.
 - Actions: `wave`, `hop`, `spin`, `cheer`, `dizzy` (five quick taps), `startle` (waking from a nap). It dozes off after
   a quiet minute.
 - The bow lags the head by about a tenth of a second, so it settles after every move.

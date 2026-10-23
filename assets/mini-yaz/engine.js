@@ -174,29 +174,53 @@ export function createMiniYaz(THREE, host, data, opts) {
   // the Finder colors: the head is blue on your left and white on your right, the body the other way round
   const BLUE = () => rgb(LOOK.blue || C.blue), WHITE = () => rgb(LOOK.white || C.white);
   const bodyMat = vinyl(WHITE(), BLUE());
-  // body: the torso, legs and arms are one soft surface. The arms bend it through a small skeleton (a shoulder, elbow
-  // and wrist each); Blender exported how much each bone moves each point, blending across the shoulders.
   const bodyGeo = geo(data.body, Array.from(dec(data.body.idx, Uint16Array)));
-  bodyGeo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(Array.from(dec(data.body.skin, Uint8Array)), 4));
-  bodyGeo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(Array.from(dec(data.body.wts, Uint8Array), (w) => w / 255), 4));
-  const bodyMesh = new THREE.SkinnedMesh(bodyGeo, bodyMat);
-  bodyMesh.frustumCulled = false;
-  squash.add(bodyMesh);
-  const rootBone = new THREE.Bone();
-  bodyMesh.add(rootBone);
-  const ARM_TILT = (R.armTilt * Math.PI) / 180;
+  // Where an arm leaves its shoulder ball, both meshes take the ball's exact normal (fading out away from the ball), so
+  // the shading runs straight across the join. On the body, only the outer half of each ball.
+  const ballNormals = (g, c, r, side) => {
+    const p = g.attributes.position, n = g.attributes.normal, v = new THREE.Vector3(), m = new THREE.Vector3();
+    for (let i = 0; i < p.count; i++) {
+      v.set(p.getX(i) - c[0], p.getY(i) - c[1], p.getZ(i) - c[2]);
+      const w = sstep(0.03, 0.0, Math.abs(v.length() - r)) * (side ? sstep(0.0, 0.08, v.x * side) : 1);
+      if (w <= 0) continue;
+      v.normalize(); m.set(n.getX(i), n.getY(i), n.getZ(i)).lerp(v, w).normalize();
+      n.setXYZ(i, m.x, m.y, m.z);
+    }
+    n.needsUpdate = true;
+  };
+  ballNormals(bodyGeo, R.shoulderL, R.ballR, -1); ballNormals(bodyGeo, R.shoulderR, R.ballR, 1);
+  squash.add(new THREE.Mesh(bodyGeo, bodyMat));
+
+  // arms: each grows out of a shoulder ball that is part of the body and turns about the ball's center, so the shoulder
+  // looks the same in any pose. Skinned to a shoulder, elbow and wrist bone so a wave bends it softly.
+  const armMats = [vinyl(WHITE()), vinyl(BLUE())];
+  const armIdx = Array.from(dec(data.arm.idx, Uint16Array));
   const makeArm = (s) => {
-    const shoulder = new THREE.Bone(), elbow = new THREE.Bone(), wrist = new THREE.Bone();
+    const g = geo(data.arm, armIdx, null, s < 0 ? data.arm.ao : data.arm.aoR);
+    ballNormals(g, [0, 0, 0], R.ballR, 0);
+    const pos = g.attributes.position, idx = [], wts = [];
+    for (let i = 0; i < pos.count; i++) {
+      const y = pos.getY(i), we = sstep(-0.26, -0.46, y), ww = sstep(-0.49, -0.6, y);   // shoulder, elbow, wrist
+      idx.push(0, 1, 2, 0); wts.push(1 - we, we * (1 - ww), we * ww, 0);
+    }
+    g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(idx, 4));
+    g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(wts, 4));
+    const shoulder = new THREE.Group();
     shoulder.position.fromArray(s < 0 ? R.shoulderL : R.shoulderR);
-    shoulder.rotation.z = s * ARM_TILT;              // bound hanging as modeled; the pose adds to this
-    elbow.position.y = -0.36;
-    wrist.position.y = -0.18;
-    shoulder.add(elbow); elbow.add(wrist); rootBone.add(shoulder);
-    return { shoulder, elbow, wrist };
+    const b0 = new THREE.Bone(), b1 = new THREE.Bone(), b2 = new THREE.Bone();
+    b1.position.y = -0.36;
+    b2.position.y = -0.18;
+    b0.add(b1); b1.add(b2);
+    const mesh = new THREE.SkinnedMesh(g, armMats[s < 0 ? 0 : 1]);
+    mesh.add(b0);
+    mesh.bind(new THREE.Skeleton([b0, b1, b2]));
+    mesh.frustumCulled = false;
+    shoulder.add(mesh);
+    squash.add(shoulder);
+    return { shoulder, elbow: b1, wrist: b2 };
   };
   const armL = makeArm(-1), armR = makeArm(1);
-  root.updateMatrixWorld(true);
-  bodyMesh.bind(new THREE.Skeleton([rootBone, armL.shoulder, armL.elbow, armL.wrist, armR.shoulder, armR.elbow, armR.wrist]));
+  const ARM_TILT = (R.armTilt * Math.PI) / 180;
 
   // head: pivots at the neck; the bow and the face ride along
   const neck = new THREE.Group();
@@ -216,7 +240,8 @@ export function createMiniYaz(THREE, host, data, opts) {
   const bow = new THREE.Mesh(geo(data.bow, Array.from(dec(data.bow.idx, Uint16Array)), BB), bowMat);
   bowPivot.add(bow);
 
-  // face: the features ride in a pivot at the head center so the gaze can slide them across the surface
+  // face: the features ride in a group at the head center. They're painted on, like the toy's: they stay put on the face
+  // and look where the head looks.
   const gaze = new THREE.Group();
   gaze.position.set(HC[0] - NECK[0], HC[1] - NECK[1], HC[2] - NECK[2]);
   head.add(gaze);
@@ -590,7 +615,7 @@ export function createMiniYaz(THREE, host, data, opts) {
   };
   const S = () => ({ x: 0, v: 0 });
   const BLINK = [[0, 0], [110, 1], [150, 1], [340, 0, 'out']];
-  const CH = ['y', 'sy', 'yaw', 'lean', 'hYaw', 'hPitch', 'hRoll', 'aLz', 'aLx', 'eL', 'wL', 'aRz', 'aRx', 'eR', 'wR', 'lid', 'happy', 'gx', 'gy', 'face', 'mouth', 'spark', 'dizzy'];
+  const CH = ['y', 'sy', 'yaw', 'lean', 'hYaw', 'hPitch', 'hRoll', 'aLz', 'aLx', 'eL', 'wL', 'aRz', 'aRx', 'eR', 'wR', 'lid', 'happy', 'face', 'mouth', 'spark', 'dizzy'];
   const MAXED = ['lid', 'happy', 'face', 'spark', 'dizzy'];   // these blend by taking the larger value, not by adding
   const zero = () => { const o = {}; CH.forEach((c) => { o[c] = 0; }); return o; };
   const D = Math.PI / 180;
@@ -632,7 +657,6 @@ export function createMiniYaz(THREE, host, data, opts) {
     o.aLz += flow(t, [[0, 0], [320, -30 * D], [720, -24 * D], [860, -8 * D], [1100, 0]]);   // arms fling out in the turn
     o.aRz += flow(t, [[0, 0], [320, 32 * D], [720, 25 * D], [870, 9 * D], [1120, 0]]);
     o.yaw += Math.PI * 2 * EASE_SPIN(clamp((t - 180) / 660, 0, 1));
-    o.gx += flow(t, [[0, 0], [120, 0.12], [260, 0.12], [860, 0]]);
     o.lid = Math.max(o.lid, track(t - 90, BLINK));
     return o;
   };
@@ -641,7 +665,6 @@ export function createMiniYaz(THREE, host, data, opts) {
     const o = zero();
     o.hYaw += flow(t, [[0, 0], [420, 0.38], [1150, 0.38], [1650, -0.3], [2300, -0.3], [2800, 0]]);
     o.hRoll += flow(t, [[0, 0], [420, -0.05], [1150, -0.05], [1650, 0.05], [2300, 0.05], [2800, 0]]);
-    o.gx += flow(t, [[0, 0], [300, 0.1], [1150, 0.1], [1500, -0.1], [2300, -0.1], [2700, 0]]);
     o.lid = Math.max(track(t - 300, BLINK), track(t - 1450, BLINK));
     return o;
   };
@@ -706,7 +729,7 @@ export function createMiniYaz(THREE, host, data, opts) {
     act: null, prev: null, pending: null, nextTap: 0, nextIdle: 9000, near: false, touch: false, scrollLook: null,
     blinkAt: 1600, blinkT0: -1e9, blinkTwice: false,
     ptr: null, idleLookAt: 2200, idleLook: { x: 0, y: 0 },
-    sp: { yaw: S(), pitch: S(), body: S(), ex: S(), ey: S(), happy: S(), lean: S(), mouth: S(), spark: S() },
+    sp: { yaw: S(), pitch: S(), body: S(), happy: S(), lean: S(), mouth: S(), spark: S() },
     drag: null, dragYaw: S(), dragVel: 0, lastDragEnd: -1e9,
     press: S(), pressTo: 0, scrollKick: 0, lastScrollY: typeof window !== 'undefined' ? window.scrollY : 0,
     hist: [],
@@ -758,7 +781,7 @@ export function createMiniYaz(THREE, host, data, opts) {
       hRoll: (0.03 * wave(t, 5300, 0.13) + 0.01 * wave(t, 2300, 0.61)) * r,
       aLz: -(ARM_TILT + 0.035 * wave(t - 90, 4100, 0.21) * r), aLx: 0.03 * wave(t, 5100, 0.3) * r, eL: 0.04 + 0.04 * wave(t - 250, 4100, 0.21) * r,
       aRz: ARM_TILT + 0.032 * wave(t - 130, 3700, 0.57) * r, aRx: 0.03 * wave(t, 4300, 0.7) * r, eR: -0.04 - 0.04 * wave(t - 270, 3700, 0.57) * r,
-      lid: 0, happy: 0, gx: 0, gy: 0, face: 0, wL: 0, wR: 0, mouth: 0, spark: 0, dizzy: 0
+      lid: 0, happy: 0, face: 0, wL: 0, wR: 0, mouth: 0, spark: 0, dizzy: 0
     };
     if (STANCE === 'point') {
       P.aRz += 1.05 + 0.04 * wave(t - 140, 2900, 0.2) * r; P.aRx += 0.35; P.eR += -0.25 + 0.06 * wave(t - 260, 2900, 0.2) * r;
@@ -806,7 +829,7 @@ export function createMiniYaz(THREE, host, data, opts) {
       P.aLz += 0.07 * zz; P.aRz -= 0.07 * zz;
     }
 
-    // attention: eyes lead, the head follows, then the body
+    // attention: the head turns to look, and the body follows more slowly
     const at = zz > 0.5 ? null : attention();
     let tYaw = 0, tPitch = 0, near = 9;
     if (at) { tYaw = at.yaw * (1 - zz); tPitch = at.pitch * (1 - zz); near = at.near; }
@@ -819,15 +842,13 @@ export function createMiniYaz(THREE, host, data, opts) {
     }
     if (!at) { tYaw = m.idleLook.x; tPitch = m.idleLook.y; }
     if (!at && m.scrollLook && t - m.scrollLook.t < 1400) { tYaw = 0; tPitch = 0.26 * m.scrollLook.dir; }   // phones: glance toward the page as you scroll
-    const faceK = A ? A.face : 0;                       // during a wave, eyes come back to you
+    const faceK = A ? A.face : 0;                       // during a wave, the face comes back to you
     tYaw *= 1 - faceK; tPitch *= 1 - faceK;
-    const ex = spring(m.sp.ex, clamp(tYaw, -0.6, 0.6), 22, dts);
-    const ey = spring(m.sp.ey, clamp(tPitch, -0.45, 0.45), 22, dts);
-    const hy = spring(m.sp.yaw, clamp(tYaw * 0.85, -0.62, 0.62), 7.5, dts);
-    const hp = spring(m.sp.pitch, clamp(tPitch * 0.7, -0.32, 0.36), 7.5, dts);
-    const by = spring(m.sp.body, clamp(tYaw * 0.4, -0.38, 0.38), 3.6, dts);
-    if (Math.abs(ex - hy) > 0.35 && t - m.blinkT0 > 900) { m.blinkT0 = t; m.blinkTwice = false; }   // blink on a big glance
-    P.gx += clamp((ex - hy) * 0.5, -0.12, 0.12); P.gy += clamp((ey - hp) * 0.4, -0.08, 0.08);
+    const hyT = clamp(tYaw * 0.85, -0.62, 0.62);
+    const hy = spring(m.sp.yaw, hyT, 11, dts);
+    const hp = spring(m.sp.pitch, clamp(tPitch * 0.7, -0.32, 0.36), 11, dts);
+    const by = spring(m.sp.body, clamp(tYaw * 0.4, -0.38, 0.38), 4.5, dts);
+    if (Math.abs(hyT - hy) > 0.3 && t - m.blinkT0 > 900) { m.blinkT0 = t; m.blinkTwice = false; }   // blink as a big turn starts
     P.hYaw += hy - by; P.hPitch += hp; P.yaw += by; P.hRoll += -0.12 * (hy - by);
     const happyT = Math.max(A ? A.happy : 0, STANCE === 'cheer' ? 0.85 * (1 - zz) : 0);
     P.spark = spring(m.sp.spark, Math.max(m.near ? 1 : 0, A ? A.spark : 0, t < m.oohUntil ? 1 : 0), 10, dts);
@@ -899,7 +920,6 @@ export function createMiniYaz(THREE, host, data, opts) {
     armR.shoulder.rotation.set(P.aRx, 0, P.aRz);
     armR.elbow.rotation.set(0, 0, P.eR);
     armR.wrist.rotation.set(0, 0, P.wR);
-    gaze.rotation.set(P.gy, P.gx, 0);
     guardHand(armR, P, 1);       // no threshold: far from the head the overlap is simply zero
     guardHand(armL, P, -1);
     if (held.length) {
@@ -1089,6 +1109,8 @@ export function createMiniYaz(THREE, host, data, opts) {
       key.intensity = LOOK.key; key.position.set(LOOK.keyX, LOOK.keyY, LOOK.keyZ); hemi.intensity = LOOK.hemi;
       bodyMat.userData.own.uColA.value.copy(WHITE()); bodyMat.userData.own.uColB.value.copy(BLUE());
       headMat.userData.own.uColA.value.copy(BLUE()); headMat.userData.own.uColB.value.copy(WHITE());
+      armMats[0].userData.own.uColA.value.copy(WHITE()); armMats[0].userData.own.uColB.value.copy(WHITE());
+      armMats[1].userData.own.uColA.value.copy(BLUE()); armMats[1].userData.own.uColB.value.copy(BLUE());
       const bc = LOOK.bow ? rgb(LOOK.bow) : BLUE(); bowMat.userData.own.uColA.value.copy(bc); bowMat.userData.own.uColB.value.copy(bc);
       mats.forEach((mt) => {
         if (!mt.userData.fixed) mt.roughness = LOOK.rough;

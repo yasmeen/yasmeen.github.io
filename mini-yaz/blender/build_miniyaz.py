@@ -116,10 +116,12 @@ def front_point(X, Z):
 # shader; these are its numbers, in Blender space.
 SPLIT_TOP, SPLIT_LOW, SPLIT_STEP = -0.02, 0.12, TOP - 0.595 * HH
 
-# ---------------- body: a soft round torso, with tapered legs and arms grown out of it, all one piece ----------------
-# Every part is a distance field. The legs and arms are round cones, wide where they join and smaller at the end, and
-# each joins the torso with a smooth union, so it grows out of it with a soft fillet. The result is meshed with
-# marching cubes. The arms stay in this one surface; the browser bends them with a small skeleton (see export_web.py).
+# ---------------- body: a plump round torso with tapered legs and ball-jointed shoulders ----------------
+# Every part is a distance field. The legs are round cones, wide at the hip and smaller at the foot, joined to the torso
+# with a smooth union so they grow out of it with a soft fillet. Each shoulder is a ball, joined the same way. The result
+# is meshed with marching cubes.
+# The arms are separate pieces that grow out of those same balls and turn about their centers. A ball turned about its
+# center doesn't change, so the shoulder looks the same in every pose: no seam, and nothing stretches when an arm goes up.
 from skimage.measure import marching_cubes
 def mono(xs, vs):
     """monotone cubic through (xs, vs), xs increasing: no overshoot and no kinks between the points (no ridges)"""
@@ -170,33 +172,27 @@ def round_cone(P, a, b, r1, r2):
 def smin(a, b, k):
     h = np.clip(0.5 + 0.5 * (b - a) / k, 0, 1); return b * (1 - h) + a * h - k * h * (1 - h)
 # the torso: a soft egg, narrower under the head and widest at the belly, its bottom tucked into the legs
-torsoRows = [(1.75, 0.0), (1.7, 0.36), (1.6, 0.47), (1.45, 0.53), (1.25, 0.585), (1.05, 0.635), (0.85, 0.665), (0.7, 0.655),
-             (0.6, 0.61), (0.52, 0.48), (0.47, 0.28), (0.45, 0.0)]
+torsoRows = [(1.75, 0.0), (1.7, 0.38), (1.6, 0.5), (1.45, 0.565), (1.25, 0.62), (1.05, 0.67), (0.85, 0.695), (0.7, 0.685),
+             (0.6, 0.64), (0.52, 0.5), (0.47, 0.3), (0.45, 0.0)]
 torsoD = profile_sdf(torsoRows)
 # legs: wide at the hip, tapering to small round feet that just flatten where they stand
-LEG_HIP, LEG_FOOT = (0.29, 0.0, 0.72, 0.35), (0.3, 0.0, 0.2, 0.21)          # (x, y, z, radius)
-# arms: wide at the shoulder, tapering to a rounded hand, hanging out at ARM_TILT degrees. They meet the torso only at
-# the shoulder (mostly under the head), with a gap below the armpit, so raising an arm doesn't drag the torso's side.
-ARM_TILT, ARM_LEN, ARM_R = 38.0, 0.8, (0.215, 0.125)
-SHOULDER = (0.6, 0.0, 1.42)
-def arm_axis(s):
-    t = math.radians(ARM_TILT); return np.array([s * math.sin(t), 0.0, -math.cos(t)])
-def arm_end(s): return np.array([SHOULDER[0] * s, SHOULDER[1], SHOULDER[2]]) + arm_axis(s) * (ARM_LEN - ARM_R[1])
+LEG_HIP, LEG_FOOT = (0.3, 0.0, 0.74, 0.38), (0.31, 0.0, 0.21, 0.235)        # (x, y, z, radius)
+# arms: plump, wide at the shoulder ball and smaller at the hand, hanging out at ARM_TILT degrees
+ARM_TILT, ARM_LEN, ARM_R = 38.0, 0.8, (0.235, 0.145)
+SHOULDER = (0.64, 0.0, 1.4)
 def d_trunk(P):
-    """torso and legs"""
+    """torso, legs and the two shoulder balls"""
     x, y, z = P[:, 0], P[:, 1], P[:, 2]
-    dT = torsoD(np.sqrt(x * x + (y / 0.85) ** 2), z)
+    dT = torsoD(np.sqrt(x * x + (y / 0.88) ** 2), z)
     legs = [round_cone(P, (LEG_HIP[0] * s, 0, LEG_HIP[2]), (LEG_FOOT[0] * s, 0, LEG_FOOT[2]), LEG_HIP[3], LEG_FOOT[3]) for s in (-1, 1)]
-    dL = smin(legs[0], legs[1], 0.05)              # the crotch, rounded
+    dL = smin(legs[0], legs[1], 0.06)              # the crotch, rounded
     dL = -smin(-dL, z, 0.03)                       # flat where the feet meet the ground, with a soft edge
-    return smin(dT, dL, 0.16)
-def d_arm(P, s):
-    return round_cone(P, (SHOULDER[0] * s, SHOULDER[1], SHOULDER[2]), arm_end(s), ARM_R[0], ARM_R[1])
-ARM_K = 0.06
-def d_body(P):
-    d = d_trunk(P)
-    for s in (-1, 1): d = smin(d, d_arm(P, s), ARM_K)
+    d = smin(dT, dL, 0.2)
+    for s in (-1, 1):
+        ball = np.sqrt(((P - np.array([SHOULDER[0] * s, SHOULDER[1], SHOULDER[2]])) ** 2).sum(1)) - (ARM_R[0] + 0.003)
+        d = smin(d, ball, 0.12)
     return d
+d_body = d_trunk
 VOX = 0.011 if WEB else 0.0085
 gx = np.arange(-1.25, 1.25 + VOX, VOX); gy = np.arange(-0.75, 0.75 + VOX, VOX); gz = np.arange(-0.04, 1.86, VOX)
 field = np.empty((len(gx), len(gy), len(gz)), np.float32)
@@ -218,6 +214,41 @@ if WEB:
     dm = body.modifiers.new('dec', 'DECIMATE'); dm.ratio = min(1.0, 7000 / len(body.data.vertices))
     bpy.ops.object.modifier_apply(modifier='dec')
 bpy.ops.object.shade_smooth()
+# the arm, in its own space: the pivot (the ball's center) at the origin, hanging along -Z. It's a round cone whose root
+# is the shoulder ball itself; the part of it that is ball is cut away, so the arm starts right where it leaves the ball,
+# tangent to it, and the torso's ball (a hair bigger) covers the cut edge in any pose.
+AV = 0.008 if WEB else 0.006
+ax = np.arange(-0.27, 0.27 + AV, AV); az = np.arange(-ARM_LEN - 0.03, ARM_R[0] + 0.03, AV)
+AX, AY, AZ = np.meshgrid(ax, ax, az, indexing='ij')
+P = np.stack([AX.ravel(), AY.ravel(), AZ.ravel()], 1)
+afield = round_cone(P, (0, 0, 0), (0, 0, -(ARM_LEN - ARM_R[1])), ARM_R[0], ARM_R[1]).reshape(AX.shape)
+av, af, _, _ = marching_cubes(afield.astype(np.float32), 0.0, spacing=(AV, AV, AV))
+av += np.array([ax[0], ax[0], az[0]])
+del AX, AY, AZ, P, afield
+Z_TAN = -ARM_R[0] * (ARM_R[0] - ARM_R[1]) / (ARM_LEN - ARM_R[1])   # where the cone leaves the ball, along the arm
+keep = [f for f in af if av[f, 2].min() < Z_TAN - 0.004]
+used = np.unique(np.array(keep).ravel()); remap = -np.ones(len(av), int); remap[used] = np.arange(len(used))
+arm0 = mk('Arm', av[used], [tuple(remap[f]) for f in keep])
+bpy.ops.object.select_all(action='DESELECT'); arm0.select_set(True); bpy.context.view_layer.objects.active = arm0
+sm = arm0.modifiers.new('smooth', 'SMOOTH'); sm.factor = 0.5; sm.iterations = 3
+bpy.ops.object.modifier_apply(modifier='smooth')
+if WEB:
+    dm = arm0.modifiers.new('dec', 'DECIMATE'); dm.ratio = min(1.0, 1800 / len(arm0.data.vertices))
+    bpy.ops.object.modifier_apply(modifier='dec')
+bpy.ops.object.shade_smooth()
+arms = []
+for s in (-1, 1):                                  # both arms share the vertex order, so one export serves both
+    arm = arm0 if s < 0 else bpy.data.objects.new('Arm', arm0.data.copy())
+    if s > 0: scene.collection.objects.link(arm)
+    arm.location = (SHOULDER[0] * s, SHOULDER[1], SHOULDER[2])
+    arm.rotation_euler = (0, -math.radians(ARM_TILT) * s, 0)
+    arms.append(arm)
+bpy.context.view_layer.update()
+# check: past its ball, a hanging arm must stay clear of the body (otherwise it would show a crease where they cross)
+for arm in arms:
+    W = np.array([arm.matrix_world @ v.co for v in arm.data.vertices]); L = np.array([v.co[2] for v in arm.data.vertices])
+    inside = (d_trunk(W) < -0.004) & (L < -ARM_R[0] - 0.05)
+    print('arm points inside the body past the shoulder:', int(inside.sum()))
 
 # ---------------- the bow: two puffy loops and a knot, on top of the head on the white side ----------------
 BOW_L = 0.4
@@ -321,7 +352,7 @@ eyeM, _, _ = principled('Eye', srgb(18, 16, 18), rough=0.15, coat=1.0, spec=0.6)
 glintM, _, gb = principled('Glint', (1, 1, 1, 1), rough=0.3)
 if 'Emission Color' in gb.inputs: gb.inputs['Emission Color'].default_value = (1, 1, 1, 1); gb.inputs['Emission Strength'].default_value = 4.0
 lineM, _, _ = principled('Line', srgb(28, 26, 30), rough=0.5)
-for o, mt in [(head, headM), (body, bodyM), (bow, blueM), (smile, lineM)] + [(e, eyeM) for e, g in eyes] + [(g, glintM) for e, g in eyes]:
+for o, mt in [(head, headM), (body, bodyM), (arms[0], whiteM), (arms[1], blueM), (bow, blueM), (smile, lineM)] + [(e, eyeM) for e, g in eyes] + [(g, glintM) for e, g in eyes]:
     o.data.materials.clear(); o.data.materials.append(mt)
 
 # ---------------- light, world, render ----------------

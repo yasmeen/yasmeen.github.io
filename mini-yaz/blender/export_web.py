@@ -5,8 +5,10 @@ scene.cycles.samples = 96
 scene.render.bake.target = 'VERTEX_COLORS'
 scene.world.light_settings.distance = 0.3
 for o in [smile] + [e for e, g in eyes] + [g for e, g in eyes]: o.hide_render = True   # the face features stay out of the bake
-parts = [('head', head), ('body', body), ('bow', bow)]
+parts = [('head', head), ('body', body), ('bow', bow), ('armL', arms[0]), ('armR', arms[1])]
 for name, ob in parts:
+    # the body and arms are baked without each other: they meet at the shoulder ball, and must shade alike there
+    for o in [body] + arms: o.hide_render = (ob in arms and o is body) or (ob is body and o in arms)
     ca = ob.data.color_attributes.new('ao', 'FLOAT_COLOR', 'POINT')
     ob.data.color_attributes.active_color = ca
     bpy.ops.object.select_all(action='DESELECT'); ob.select_set(True); bpy.context.view_layer.objects.active = ob
@@ -39,25 +41,11 @@ def ring_sizes(rings, N): return [1 if (r[1] < 1e-5 and r[2] < 1e-5) else N for 
 data['head'] = pack(head); data['head']['rings'] = ring_sizes(headRings, NH)
 data['body'] = pack(body); data['body']['idx'] = tris(body)
 data['bow'] = pack(bow); data['bow']['idx'] = tris(bow)
-# The arms are part of the body, so the body carries skin weights for a small skeleton: bone 0 is the body itself,
-# 1-3 the left shoulder, elbow and wrist, 4-6 the right. A point belongs to an arm as far as the arm's distance field
-# wins over the trunk's (blending across the shoulder's fillet), then to its shoulder, elbow or wrist by how far it is
-# down the arm.
-def sstep(a, b, x): t = np.clip((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t)
-BV = np.array([body.matrix_world @ v.co for v in body.data.vertices])
-dT = d_trunk(BV); idx4 = np.zeros((len(BV), 4), np.uint8); w4 = np.zeros((len(BV), 4))
-w4[:, 0] = 1
-for s, base in ((-1, 1), (1, 4)):
-    a = np.clip(0.5 + 0.5 * (dT - d_arm(BV, s)) / 0.04, 0, 1)
-    along = (BV - np.array([SHOULDER[0] * s, SHOULDER[1], SHOULDER[2]])) @ arm_axis(s)
-    we, ww = sstep(0.26, 0.46, along), sstep(0.49, 0.6, along)
-    mine = (BV[:, 0] * s > 0) & (a > 0)
-    idx4[mine] = [0, base, base + 1, base + 2]
-    w4[mine] = np.stack([1 - a, a * (1 - we), a * we * (1 - ww), a * we * ww], 1)[mine]
-q = np.round(w4 * 255); q[:, 0] += 255 - q.sum(1)              # whole bytes that still add up to 255
-data['body']['skin'] = b64(idx4.reshape(-1)); data['body']['wts'] = b64(q.astype(np.uint8).reshape(-1))
-# rig, split and face, in three.js space
-data['rig'] = dict(shoulderL=to3((-SHOULDER[0], SHOULDER[1], SHOULDER[2])), shoulderR=to3(SHOULDER), armTilt=ARM_TILT,
+# arms: exported once in their own space (pivot at the shoulder ball's center, hanging down -y); the right arm has the
+# same points, so it only adds its own baked shading. Placement comes from the rig.
+data['arm'] = pack(arms[0], world=False); data['arm']['idx'] = tris(arms[0])
+data['arm']['aoR'] = pack(arms[1], world=False)['ao']
+data['rig'] = dict(shoulderL=to3((-SHOULDER[0], SHOULDER[1], SHOULDER[2])), shoulderR=to3(SHOULDER), armTilt=ARM_TILT, ballR=ARM_R[0],
                    neck=[0, 1.5, 0], headCenter=[0, 2.34, 0], bowBase=to3(BOW_AT))
 data['split'] = dict(top=SPLIT_TOP, low=SPLIT_LOW, step=SPLIT_STEP)
 data['eyes'] = []

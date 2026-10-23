@@ -218,7 +218,7 @@ ${win('gel', 'Aqua gel maker', `      <h2 id="gel-h">Aqua gel maker</h2>
       </div>`)}
 
 ${win('springs', 'Springs, not keyframes', `      <h2 id="springs-h">Springs, not keyframes</h2>
-      <p>Mini Yaz's eyes, head and body follow you with critically damped springs, the fastest kind that never overshoots. Move around the pad. The blue dot is a spring; the gray one restarts a 400 ms ease every time the target moves, so it lurches whenever you change direction.</p>
+      <p>Mini Yaz's head and body follow you with critically damped springs, the fastest kind that never overshoots. Move around the pad. The blue dot is a spring; the gray one restarts a 400 ms ease every time the target moves, so it lurches whenever you change direction.</p>
       <div class="exp-grid">
         <div class="spring-pad" data-spring-pad><canvas></canvas><p>Drag or move here</p></div>
         <div class="controls">
