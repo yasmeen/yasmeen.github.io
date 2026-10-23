@@ -179,11 +179,11 @@ torsoRows = [(1.75, 0.0), (1.7, 0.38), (1.6, 0.5), (1.45, 0.565), (1.25, 0.62), 
 torsoD = profile_sdf(torsoRows)
 BELLY_Y, BELLY_D = 0.1, 0.93               # the torso's center sits this far behind the head's; its depth over its width
 # legs: wide at the hip, tapering to small round feet (a little longer than wide) that just flatten where they stand
-LEG_HIP, LEG_FOOT = (0.31, BELLY_Y, 0.62, 0.36), (0.33, BELLY_Y, 0.2, 0.24)   # (x, y, z, radius)
-LEG_LONG = 1.12
+LEG_HIP, LEG_FOOT = (0.31, BELLY_Y, 0.62, 0.36), (0.34, BELLY_Y, 0.17, 0.255)   # (x, y, z, radius)
+LEG_LONG = 1.15
 # arms: plump, wide at the shoulder ball and smaller at the hand, hanging out at ARM_TILT degrees
-ARM_TILT, ARM_LEN, ARM_R = 31.0, 0.8, (0.235, 0.145)
-SHOULDER = (0.63, 0.0, 1.4)
+ARM_TILT, ARM_LEN, ARM_R = 26.0, 0.8, (0.225, 0.145)
+SHOULDER = (0.65, 0.0, 1.4)
 def d_trunk(P):
     """torso, legs and the two shoulder balls"""
     x, y, z = P[:, 0], P[:, 1], P[:, 2]

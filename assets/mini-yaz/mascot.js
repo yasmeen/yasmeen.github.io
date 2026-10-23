@@ -6,6 +6,8 @@
 //   <div class="mini-yaz" data-pose="wave" data-props="laptop"> <img class="yaz-poster"> <button class="yaz-hit"> </div>
 // Pages talk to it with events on document: 'miniyaz:react' {kind}, 'miniyaz:look' {x, y}, 'miniyaz:motion' {paused},
 // 'miniyaz:theme' {dark}, 'miniyaz:color' {name}. The color (one of COLORS) is remembered on this device.
+// When the site swaps pages in place (assets/js/site.js), the live Mini Yaz moves to the new page instead of starting
+// over: it glides from its old spot to its new one, takes up the new page's pose and props, and hops as it lands.
 import { createMiniYaz } from './engine.js';
 
 const here = new URL('.', import.meta.url);
@@ -84,7 +86,10 @@ const live = [];
 const STANCE = { point: 'point', cheer: 'cheer', lost: 'lost' };
 const INTRO = { wave: 'wave', spin: 'spin' };
 
+const yawOf = (stance) => (stance === 'point' ? 0.2 : stance === 'cheer' ? 0.12 : stance === 'lost' ? 0.1 : 0.28);
+
 function mount(el) {
+  el.dataset.mounted = '1';
   const pose = el.dataset.pose || 'idle';
   const poster = el.querySelector('.yaz-poster');
   if (poster) poster.style.filter = posterFilter(colorName());
@@ -103,7 +108,7 @@ function mount(el) {
       intro: INTRO[pose] || null,
       introAt: pose === 'spin' ? 900 : 700,
       first: pose === 'spin' ? 'spin' : pose === 'wave' || pose === 'idle' ? 'wave' : 'hop',
-      yaw: stance === 'point' ? 0.2 : stance === 'cheer' ? 0.12 : stance === 'lost' ? 0.1 : 0.28,
+      yaw: yawOf(stance),
       props: (el.dataset.props || '').split(/\s+/).filter(Boolean),
       reduced: reducedMQ.matches,
       paused: isPaused(),
@@ -141,12 +146,12 @@ function mount(el) {
     ['pointerup', 'pointerleave', 'pointercancel'].forEach((t) => hit.addEventListener(t, () => { if (ctl) ctl.press(false); }));
   }
   el.miniYaz = () => ctl;
-  return () => { dead = true; if (ctl) ctl.dispose(); };
+  el.miniYazDispose = () => { dead = true; io.disconnect(); if (ctl) { ctl.dispose(); live.splice(live.indexOf(ctl), 1); } };
 }
 
 export { loadThree, loadModel };
 
-const all = [...document.querySelectorAll('.mini-yaz')];
+let all = [...document.querySelectorAll('.mini-yaz')];
 all.forEach(mount);
 
 // the nearest Mini Yaz on screen handles page reactions
@@ -171,4 +176,38 @@ document.addEventListener('miniyaz:color', (e) => {
   try { if (name === 'blue') localStorage.removeItem('yaz-color'); else localStorage.setItem('yaz-color', name); } catch (err) { /* private mode */ }
   live.forEach((c) => c.setLook(lookOf(name)));
   all.forEach((el) => { const p = el.querySelector('.yaz-poster'); if (p) p.style.filter = posterFilter(name); });
+});
+
+// ---------- moving to the next page (assets/js/site.js swaps pages in place) ----------
+let carry = null;
+document.addEventListener('site:beforeswap', () => {
+  const el = document.querySelector('.mini-yaz--main');
+  carry = el && el.miniYaz && el.miniYaz() ? { el, rect: el.getBoundingClientRect() } : null;
+  all.forEach((x) => { if (x !== (carry && carry.el) && x.miniYazDispose) x.miniYazDispose(); });
+});
+document.addEventListener('site:afterswap', (e) => {
+  const slot = document.querySelector('main .mini-yaz--main');
+  if (carry && slot) {
+    const el = carry.el, ctl = el.miniYaz();
+    ['data-pose', 'data-props', 'aria-label', 'id'].forEach((a) => { if (slot.hasAttribute(a)) el.setAttribute(a, slot.getAttribute(a)); else el.removeAttribute(a); });
+    const p0 = el.querySelector('.yaz-poster'), p1 = slot.querySelector('.yaz-poster');
+    if (p0 && p1) { p0.src = p1.src; p0.alt = p1.alt; }
+    slot.replaceWith(el);
+    const stance = STANCE[el.dataset.pose] || 'idle';
+    ctl.setStance(stance, yawOf(stance));
+    ctl.setProps((el.dataset.props || '').split(/\s+/).filter(Boolean));
+    // glide from the old spot to the new one (it keeps animating the whole way), then hop as it lands
+    const r1 = el.getBoundingClientRect(), r0 = carry.rect;
+    const still = !e.detail.animate || reducedMQ.matches || isPaused();
+    if (!still && r1.width && Math.hypot(r0.left - r1.left, r0.top - r1.top) > 2) {
+      const k = r0.width / r1.width;
+      el.classList.add('is-gliding');
+      el.animate([{ transformOrigin: '0 0', transform: `translate(${r0.left - r1.left}px, ${r0.top - r1.top}px) scale(${k})` }, { transformOrigin: '0 0', transform: 'none' }],
+        { duration: 560, easing: 'cubic-bezier(.3, .7, .2, 1)' }).finished.then(() => el.classList.remove('is-gliding'), () => el.classList.remove('is-gliding'));
+      setTimeout(() => ctl.react('hop'), 380);
+    } else if (!still) ctl.react('hop');
+  } else if (carry && carry.el.miniYazDispose) carry.el.miniYazDispose();
+  carry = null;
+  all = [...document.querySelectorAll('.mini-yaz')];
+  all.forEach((el) => { if (!el.dataset.mounted) mount(el); });
 });

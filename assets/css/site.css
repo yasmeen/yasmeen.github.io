@@ -220,6 +220,8 @@ a:hover { color: var(--link-hover); }
 /* ---------- Mini Yaz ---------- */
 .mini-yaz { position: relative; width: 100%; aspect-ratio: 292 / 343; -webkit-tap-highlight-color: transparent; container-type: inline-size; }
 .mini-yaz--main { view-transition-name: mini-yaz; }
+/* moving between pages in place, Mini Yaz glides over the new page's content to its spot */
+.mini-yaz.is-gliding { z-index: 30; }
 .yaz-poster { position: absolute; left: -20%; top: -30%; width: 140%; height: 130%; max-width: none; pointer-events: none; user-select: none; transition: opacity .25s ease-out; }
 .yaz-gl { position: absolute; inset: 0; pointer-events: none; }
 .yaz-hit {

@@ -7,8 +7,9 @@ export function createMiniYaz(THREE, host, data, opts) {
   const BOX_H = 3.56;                          // world units shown by the layout box (the old 292 x 343 sprite box)
   const GROUND = 0.03;                         // ground sits 3% above the box bottom
   const EXTRA_TOP = 0.3, EXTRA_SIDE = 0.2;     // the canvas overhangs the box so hops and waves never clip
-  const BASE_YAW = opts.yaw ?? 0.28;
-  const STANCE = opts.stance || 'idle';
+  // the stance and the resting turn can change later (setStance), when Mini Yaz moves to another page
+  let BASE_YAW = opts.yaw ?? 0.28;
+  let STANCE = opts.stance || 'idle';
   const SLEEP_AFTER = opts.sleepAfter ?? 60000;   // ms without any input on the page before Mini Yaz dozes off
   // phones get a lower resolution cap; any device that can't keep up steps down further on its own
   const coarse = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
@@ -24,13 +25,15 @@ export function createMiniYaz(THREE, host, data, opts) {
   const LOOK = Object.assign({
     exposure: 0.95, env: 1.0, soft: 3.0, fill: 1.0, top: 2.0, rim: 1.5, room: 0.3,
     key: 2.6, keyX: -4, keyY: 6, keyZ: 6, hemi: 0.1,
-    // glossy vinyl, Finder blue and white; colors lift toward a lighter, cooler shade where they face the top-left light
+    // pearly vinyl, Finder blue and white; colors lift toward a lighter, cooler shade where they face the top-left light
     // (the blue toward a light cyan, like the figure). `blue` is the colored half, whatever color it is.
-    blue: [38, 146, 238], white: [232, 237, 245], lift: 0.7,
+    blue: [38, 146, 238], white: [232, 237, 245], lift: 0.9,
     phones: null, pads: null,             // the headphones' shell and cushions (the model's own pinks unless set)
-    rough: 0.42, spec: 0.6, coat: 1.0, coatRough: 0.14,
-    // a thin pearly film over the vinyl: a faint shift of color as the surface turns away
-    irid: 0.7, iridIOR: 1.35, iridMin: 150, iridMax: 450,
+    // satin, not glossy: a soft broad sheen instead of a sharp highlight
+    rough: 0.52, spec: 0.35, coat: 0.2, coatRough: 0.4,
+    // pearly: a thin film that shifts the color as the surface turns away, and a soft cool sheen at the edges
+    irid: 1.0, iridIOR: 1.45, iridMin: 250, iridMax: 700,
+    pearl: 0.7, pearlColor: [200, 232, 255], pearlRough: 0.4,
     aoPow: 1.8, aoDirect: 0.6, sss: 0.04, edge: 0.4,
     // the face: bead eyes with lashes, a thin smile
     eyeSeat: 0.04, mouthW: 1.0, mouthR: 0.016, eyeGloss: 1.0, eyeW: 1.0, glint: 0.55, lash: 1.0
@@ -78,7 +81,7 @@ export function createMiniYaz(THREE, host, data, opts) {
   const hemi = new THREE.HemisphereLight(0xffffff, 0xc9d6e8, LOOK.hemi);
   scene.add(hemi);
 
-  // ---------- glossy vinyl in two colors, with the shading baked in Blender (vertex AO) ----------
+  // ---------- pearly vinyl in two colors, with the shading baked in Blender (vertex AO) ----------
   // shared uniforms, so a look change never recompiles a shader
   const U = { uAoPow: { value: LOOK.aoPow }, uAoDirect: { value: LOOK.aoDirect }, uSss: { value: LOOK.sss }, uEdge: { value: LOOK.edge }, uLift: { value: LOOK.lift } };
   const faceUni = {
@@ -100,7 +103,8 @@ export function createMiniYaz(THREE, host, data, opts) {
     const m = new THREE.MeshPhysicalMaterial({
       color: 0xffffff, roughness: o.rough ?? LOOK.rough, metalness: 0, specularIntensity: LOOK.spec,
       clearcoat: o.coat ?? LOOK.coat, clearcoatRoughness: LOOK.coatRough,
-      iridescence: o.irid ?? LOOK.irid, iridescenceIOR: LOOK.iridIOR, iridescenceThicknessRange: [LOOK.iridMin, LOOK.iridMax]
+      iridescence: o.irid ?? LOOK.irid, iridescenceIOR: LOOK.iridIOR, iridescenceThicknessRange: [LOOK.iridMin, LOOK.iridMax],
+      sheen: o.irid === 0 ? 0 : LOOK.pearl, sheenColor: rgb(LOOK.pearlColor), sheenRoughness: LOOK.pearlRough
     });
     const own = { uColA: { value: a.clone() }, uColB: { value: (b || a).clone() }, uLiftA: { value: liftOf(a) }, uLiftB: { value: liftOf(b || a) }, uSplit: { value: (o.split || [0, 0, -99, 0.01]).slice() }, uProfile: { value: o.profile ? 1 : 0 } };
     m.userData.own = own; m.userData.fixed = o.rough != null; m.userData.plain = o.irid != null;
@@ -200,32 +204,21 @@ export function createMiniYaz(THREE, host, data, opts) {
   squash.add(new THREE.Mesh(bodyGeo, bodyMat));
 
   // arms: each grows out of a shoulder ball that is part of the body and turns about the ball's center, so the shoulder
-  // looks the same in any pose. Skinned to a shoulder, elbow and wrist bone so a wave bends it softly.
+  // looks the same in any pose. They're rigid, like the toy's: the elbow and wrist only mark points along the arm (for
+  // the hand guard and held props), and the actions' elbow and wrist bends are folded into the shoulder's swing.
   const armMats = [vinyl(WHITE()), vinyl(BLUE())];
   const armIdx = Array.from(dec(data.arm.idx, Uint16Array));
   const makeArm = (s) => {
     const g = geo(data.arm, armIdx, null, s < 0 ? data.arm.ao : data.arm.aoR);
     ballNormals(g, [0, 0, 0], R.ballR, 0);
-    const pos = g.attributes.position, idx = [], wts = [];
-    for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i), we = sstep(-0.26, -0.46, y), ww = sstep(-0.49, -0.6, y);   // shoulder, elbow, wrist
-      idx.push(0, 1, 2, 0); wts.push(1 - we, we * (1 - ww), we * ww, 0);
-    }
-    g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(idx, 4));
-    g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(wts, 4));
     const shoulder = new THREE.Group();
     shoulder.position.fromArray(s < 0 ? R.shoulderL : R.shoulderR);
-    const b0 = new THREE.Bone(), b1 = new THREE.Bone(), b2 = new THREE.Bone();
-    b1.position.y = -0.36;
-    b2.position.y = -0.18;
-    b0.add(b1); b1.add(b2);
-    const mesh = new THREE.SkinnedMesh(g, armMats[s < 0 ? 0 : 1]);
-    mesh.add(b0);
-    mesh.bind(new THREE.Skeleton([b0, b1, b2]));
-    mesh.frustumCulled = false;
-    shoulder.add(mesh);
+    shoulder.add(new THREE.Mesh(g, armMats[s < 0 ? 0 : 1]));
+    const elbow = new THREE.Group(), wrist = new THREE.Group();
+    elbow.position.y = -0.36; wrist.position.y = -0.18;
+    shoulder.add(elbow); elbow.add(wrist);
     squash.add(shoulder);
-    return { shoulder, elbow: b1, wrist: b2 };
+    return { shoulder, elbow, wrist };
   };
   const armL = makeArm(-1), armR = makeArm(1);
   const ARM_TILT = (R.armTilt * Math.PI) / 180;
@@ -641,7 +634,7 @@ export function createMiniYaz(THREE, host, data, opts) {
     return o;
   };
   const waveHi = (t, o) => {
-    // turn to face you, raise the near-side hand out past the cheek, and wave it from the elbow.
+    // turn to face you, raise the near-side arm out past the cheek, and wave it from the shoulder.
     // Each part's wiggle starts from zero and eases in, so the hand never jumps.
     const P = 440;
     const w = (lag) => { const tt = t - lag; return Math.sin(((tt - 470) / P) * Math.PI * 2) * seg(tt, 470, 800, 'inOut') * (1 - seg(tt, 1950, 2200, 'inOut')); };
@@ -649,7 +642,7 @@ export function createMiniYaz(THREE, host, data, opts) {
     o.aRz += flow(t, [[0, 0], [110, -6 * D], [450, 90 * D], [2150, 90 * D], [2600, 0]]) + 6 * D * w(0);
     o.aRx += flow(t, [[0, 0], [220, 34 * D], [450, 58 * D], [2150, 58 * D], [2450, 30 * D], [2650, 0]]);   // forward first, so the hand rises clear of the head
     o.eR += flow(t, [[0, 0], [320, 10 * D], [470, 34 * D], [2150, 34 * D], [2600, 0]]) + 12 * D * w(90);
-    o.wR += flow(t, [[0, 0], [470, 8 * D], [2150, 8 * D], [2600, 0]]) + 30 * D * w(170);   // the hand flaps last: shoulder, elbow, wrist
+    o.wR += flow(t, [[0, 0], [470, 8 * D], [2150, 8 * D], [2600, 0]]) + 30 * D * w(170);   // three lagging wiggles add up to a rolling swing
     const bounce = seg(t, 470, 800, 'inOut') * (1 - seg(t, 1950, 2200, 'inOut'));
     o.y += 0.022 * (0.5 - 0.5 * Math.cos(((t - 470) / P) * Math.PI * 2)) * bounce;
     o.mouth = flow(t, [[0, 0], [420, 0], [600, 1], [2050, 1], [2350, 0]]);   // forearm up beside the face; the hand trails the arm
@@ -742,7 +735,9 @@ export function createMiniYaz(THREE, host, data, opts) {
     drag: null, dragYaw: S(), dragVel: 0, lastDragEnd: -1e9,
     press: S(), pressTo: 0, scrollKick: 0, lastScrollY: typeof window !== 'undefined' ? window.scrollY : 0,
     sleep: S(), asleep: false, lastInput: 0, taps: [], focus: null, oohUntil: -1e9,
-    paused: !!opts.paused, ema: 16, slowFor: 0, lastFrame: 0
+    paused: !!opts.paused, ema: 16, slowFor: 0, lastFrame: 0,
+    st: { point: { x: STANCE === 'point' ? 1 : 0, v: 0 }, cheer: { x: STANCE === 'cheer' ? 1 : 0, v: 0 }, lost: { x: STANCE === 'lost' ? 1 : 0, v: 0 } },
+    base: { x: BASE_YAW, v: 0 }
   };
   const reduced = !!opts.reduced;
   const emit = (type) => { if (opts.onState) opts.onState(type); };
@@ -784,18 +779,24 @@ export function createMiniYaz(THREE, host, data, opts) {
       aRz: ARM_TILT + 0.032 * wave(t - 130, 3700, 0.57) * r, aRx: 0.03 * wave(t, 4300, 0.7) * r, eR: -0.04 - 0.04 * wave(t - 270, 3700, 0.57) * r,
       lid: 0, happy: 0, face: 0, wL: 0, wR: 0, mouth: 0, spark: 0, dizzy: 0
     };
-    if (STANCE === 'point') {
-      P.aRz += 1.05 + 0.04 * wave(t - 140, 2900, 0.2) * r; P.aRx += 0.35; P.eR += -0.25 + 0.06 * wave(t - 260, 2900, 0.2) * r;
-      P.hYaw += 0.25; P.hRoll -= 0.05;
-    } else if (STANCE === 'cheer') {
+    // each stance eases in and out on its own spring, so a change of stance (a new page) is a smooth move, not a snap
+    const st = (k) => spring(m.st[k], STANCE === k ? 1 : 0, 6, dts);
+    const kp = st('point'), kc = st('cheer'), kl = st('lost');
+    m.base.x = spring(m.base, BASE_YAW, 5, dts);
+    if (kp > 1e-3) {
+      P.aRz += kp * (1.05 + 0.04 * wave(t - 140, 2900, 0.2) * r); P.aRx += kp * 0.35; P.eR += kp * (-0.25 + 0.06 * wave(t - 260, 2900, 0.2) * r);
+      P.hYaw += kp * 0.25; P.hRoll -= kp * 0.05;
+    }
+    if (kc > 1e-3) {
       const c = wave(t, 1700, 0.1) * r;
-      P.aLz += -1.62 + 0.08 * c; P.aRz += 1.58 - 0.08 * wave(t - 120, 1700, 0.1) * r;   // arms up and out in a V, clear of the head
-      P.eL += -0.55; P.eR += 0.55; P.aLx += 0.12; P.aRx += 0.12;
-      P.hPitch -= 0.08; P.sy += 0.008 * c; P.happy = 0.85;
-    } else if (STANCE === 'lost') {
+      P.aLz += kc * (-1.62 + 0.08 * c); P.aRz += kc * (1.58 - 0.08 * wave(t - 120, 1700, 0.1) * r);   // arms up and out in a V, clear of the head
+      P.eL += kc * -0.55; P.eR += kc * 0.55; P.aLx += kc * 0.12; P.aRx += kc * 0.12;
+      P.hPitch -= kc * 0.08; P.sy += kc * 0.008 * c;
+    }
+    if (kl > 1e-3) {
       // holding a map up, head tipped: which way was it again?
-      P.aRx += -0.9; P.aLx += -0.9; P.aRz += -0.25; P.aLz += 0.25; P.eR += -0.3; P.eL += 0.3;
-      P.hRoll += 0.15 + 0.04 * wave(t, 3100, 0.2) * r; P.hPitch += 0.06; P.hYaw += 0.1 * wave(t, 5300, 0.6) * r;
+      P.aRx += kl * -0.9; P.aLx += kl * -0.9; P.aRz += kl * -0.25; P.aLz += kl * 0.25; P.eR += kl * -0.3; P.eL += kl * 0.3;
+      P.hRoll += kl * (0.15 + 0.04 * wave(t, 3100, 0.2) * r); P.hPitch += kl * 0.06; P.hYaw += kl * 0.1 * wave(t, 5300, 0.6) * r;
     }
 
     let A = null;
@@ -851,7 +852,7 @@ export function createMiniYaz(THREE, host, data, opts) {
     const by = spring(m.sp.body, clamp(tYaw * 0.4, -0.38, 0.38), 4.5, dts);
     if (Math.abs(hyT - hy) > 0.3 && t - m.blinkT0 > 900) { m.blinkT0 = t; m.blinkTwice = false; }   // blink as a big turn starts
     P.hYaw += hy - by; P.hPitch += hp; P.yaw += by; P.hRoll += -0.12 * (hy - by);
-    const happyT = Math.max(A ? A.happy : 0, STANCE === 'cheer' ? 0.85 * (1 - zz) : 0);
+    const happyT = Math.max(A ? A.happy : 0, 0.85 * kc * (1 - zz));
     P.spark = spring(m.sp.spark, Math.max(m.near ? 1 : 0, A ? A.spark : 0, t < m.oohUntil ? 1 : 0), 10, dts);
     P.dizzy = A ? A.dizzy : 0;
     P.sleep = zz;
@@ -896,6 +897,8 @@ export function createMiniYaz(THREE, host, data, opts) {
     }
     return worst;
   };
+  // a rigid arm: the elbow and wrist bends of the actions become part of the shoulder's swing
+  const swing = (arm, x, z, e, w) => arm.shoulder.rotation.set(x, 0, z + e + 0.5 * w);
   const guardHand = (arm, P, s) => {
     for (let i = 0; i < 3; i++) {
       root.updateMatrixWorld(true);
@@ -903,8 +906,8 @@ export function createMiniYaz(THREE, host, data, opts) {
       const o = 0.03 * Math.log1p(Math.exp(raw / 0.03));      // soft onset: the push eases in instead of snapping
       if (o < 1e-4) return;
       P.guard = (P.guard || 0) + o;
-      if (s > 0) { P.aRx += o * 2.2; P.eR -= o * 1.1; arm.shoulder.rotation.set(P.aRx, 0, P.aRz); arm.elbow.rotation.set(0, 0, P.eR); }
-      else { P.aLx += o * 2.2; P.eL += o * 1.1; arm.shoulder.rotation.set(P.aLx, 0, P.aLz); arm.elbow.rotation.set(0, 0, P.eL); }
+      if (s > 0) { P.aRx += o * 2.2; P.eR -= o * 1.1; swing(armR, P.aRx, P.aRz, P.eR, P.wR); }
+      else { P.aLx += o * 2.2; P.eL += o * 1.1; swing(armL, P.aLx, P.aLz, P.eL, P.wL); }
     }
   };
   const apply = (P) => {
@@ -912,15 +915,11 @@ export function createMiniYaz(THREE, host, data, opts) {
     const ps = 1 - 0.035 * P.press;
     const sy = (1 + P.sy) * ps, sx = Math.pow(1 + P.sy, -0.6) * (1 + 0.012 * P.press);
     root.position.y = P.y;
-    root.rotation.set(0, BASE_YAW + P.yaw, P.lean);
+    root.rotation.set(0, m.base.x + P.yaw, P.lean);
     squash.scale.set(sx, sy, sx);
     head.rotation.set(P.hPitch, P.hYaw, P.hRoll, 'YXZ');
-    armL.shoulder.rotation.set(P.aLx, 0, P.aLz);
-    armL.elbow.rotation.set(0, 0, P.eL);
-    armL.wrist.rotation.set(0, 0, P.wL);
-    armR.shoulder.rotation.set(P.aRx, 0, P.aRz);
-    armR.elbow.rotation.set(0, 0, P.eR);
-    armR.wrist.rotation.set(0, 0, P.wR);
+    swing(armL, P.aLx, P.aLz, P.eL, P.wL);
+    swing(armR, P.aRx, P.aRz, P.eR, P.wR);
     guardHand(armR, P, 1);       // no threshold: far from the head the overlap is simply zero
     guardHand(armL, P, -1);
     if (held.length) {
@@ -1073,7 +1072,7 @@ export function createMiniYaz(THREE, host, data, opts) {
     m.nextTap += 1;
     start(kind);
   };
-  return {
+  const api = {
     canvas,
     tap,
     press: (on) => { m.pressTo = on && !m.paused ? 1 : 0; wake(); },
@@ -1110,7 +1109,10 @@ export function createMiniYaz(THREE, host, data, opts) {
       mats.forEach((mt) => {
         if (!mt.userData.fixed) mt.roughness = LOOK.rough;
         mt.specularIntensity = LOOK.spec; mt.clearcoatRoughness = LOOK.coatRough;
-        if (!mt.userData.plain) { mt.clearcoat = LOOK.coat; mt.iridescence = LOOK.irid; mt.iridescenceIOR = LOOK.iridIOR; mt.iridescenceThicknessRange = [LOOK.iridMin, LOOK.iridMax]; }
+        if (!mt.userData.plain) {
+          mt.clearcoat = LOOK.coat; mt.iridescence = LOOK.irid; mt.iridescenceIOR = LOOK.iridIOR; mt.iridescenceThicknessRange = [LOOK.iridMin, LOOK.iridMax];
+          mt.sheen = LOOK.pearl; mt.sheenColor.copy(rgb(LOOK.pearlColor)); mt.sheenRoughness = LOOK.pearlRough;
+        }
       });
       U.uAoPow.value = LOOK.aoPow; U.uAoDirect.value = LOOK.aoDirect; U.uSss.value = LOOK.sss; U.uEdge.value = LOOK.edge; U.uLift.value = LOOK.lift;
       mats.forEach((mt) => { const o = mt.userData.own; o.uLiftA.value.copy(liftOf(o.uColA.value)); o.uLiftB.value.copy(liftOf(o.uColB.value)); });
@@ -1119,6 +1121,9 @@ export function createMiniYaz(THREE, host, data, opts) {
     },
     look: () => Object.assign({}, LOOK),
     asleep: () => m.asleep,
+    // moving to another page: ease into its stance and resting turn, and wear its props
+    setStance: (stance, yaw) => { STANCE = stance || 'idle'; if (yaw != null) BASE_YAW = yaw; wake(); },
+    setProps: (names) => { Object.keys(PROPS).forEach((n) => { if (names.includes(n) || props[n]) api.setProp(n, names.includes(n)); }); },
     // playground controls (the Lab)
     setProp: (name, on) => {
       if (on && !props[name] && PROPS[name]) props[name] = PROPS[name]();
@@ -1149,4 +1154,5 @@ export function createMiniYaz(THREE, host, data, opts) {
       canvas.remove();
     }
   };
+  return api;
 }

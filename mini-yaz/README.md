@@ -42,7 +42,8 @@ the output folder must be an absolute path, as above).
 ## The look
 
 Every lighting and material value lives in `LOOK` at the top of `assets/mini-yaz/engine.js`, and `setLook()` changes
-them live. The material is glossy vinyl with a clear coat and a thin iridescent film, with the shading baked in Blender. The blue and white aren't painted on the
+them live. The material is satin, pearly vinyl (a light clear coat, a thin iridescent film and a cool sheen), with the shading
+baked in Blender. The blue and white aren't painted on the
 model: the shader splits each part at a line (on the head, the Finder profile, stepping over at the nose), so the edge
 stays crisp at any size. Where the blue faces the big top-left light it lifts toward a light cyan, like the figure.
 `LOOK.phones` and `LOOK.pads` set the headphones' colors.
@@ -71,6 +72,9 @@ channel offsets), props, and crop.
   overshoot, and attention (the head, then the body) on critically damped springs.
 - Actions: `wave`, `hop`, `spin`, `cheer`, `dizzy` (five quick taps), `startle` (waking from a nap). It dozes off after
   a quiet minute.
+- The arms are rigid: the actions' elbow and wrist bends are folded into the swing at the shoulder.
+- Moving between pages, `assets/js/site.js` swaps the page in place and `mascot.js` carries the live Mini Yaz to the
+  new page's spot (a glide, then a hop); `setStance()` and `setProps()` ease it into that page's pose and props.
 - Props: `laptop`, `shoes`, `map`, `bib`, `trophy`, `visor`, `phone`, `coin`. Held props ride on the body and are moved to
   the hand every frame, so they stay upright.
 - It pauses off screen and in hidden tabs, holds still for reduced motion or when motion is paused, caps the resolution
