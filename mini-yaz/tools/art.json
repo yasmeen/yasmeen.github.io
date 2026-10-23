@@ -1,0 +1,273 @@
+[
+ {
+  "name": "art-run",
+  "w": 360,
+  "opts": {
+   "stance": "idle",
+   "yaw": 0.55,
+   "props": [
+    "shoes",
+    "bib"
+   ],
+   "posed": {
+    "y": 0.14,
+    "sy": 0.04,
+    "aRx": 0.75,
+    "aLx": -0.85,
+    "eR": 0.5,
+    "eL": -0.6,
+    "happy": 1,
+    "mouth": 0.6,
+    "hPitch": -0.05
+   }
+  },
+  "steps": [
+   {
+    "ms": 600
+   }
+  ],
+  "crop": [
+   -0.07,
+   -0.15,
+   1.14,
+   1.15
+  ],
+  "out": "assets/img/art-run.webp"
+ },
+ {
+  "name": "art-trophy",
+  "w": 360,
+  "opts": {
+   "stance": "cheer",
+   "yaw": 0.15,
+   "props": [
+    "trophy"
+   ],
+   "posed": {
+    "mouth": 0.7
+   }
+  },
+  "steps": [
+   {
+    "ms": 600
+   }
+  ],
+  "crop": [
+   -0.07,
+   -0.15,
+   1.14,
+   1.15
+  ],
+  "out": "assets/img/art-trophy.webp"
+ },
+ {
+  "name": "art-visor",
+  "w": 360,
+  "opts": {
+   "stance": "idle",
+   "yaw": 0.3,
+   "props": [
+    "visor"
+   ],
+   "posed": {
+    "spark": 1,
+    "mouth": 0.45,
+    "aLz": -0.35,
+    "aRz": 0.4,
+    "hPitch": -0.08
+   }
+  },
+  "steps": [
+   {
+    "ms": 600
+   }
+  ],
+  "crop": [
+   -0.07,
+   -0.15,
+   1.14,
+   1.15
+  ],
+  "out": "assets/img/art-visor.webp"
+ },
+ {
+  "name": "art-phone",
+  "w": 360,
+  "opts": {
+   "stance": "idle",
+   "yaw": 0.25,
+   "props": [
+    "phone"
+   ],
+   "posed": {
+    "aRx": -1.1,
+    "eR": 0.4,
+    "spark": 1,
+    "hYaw": 0.12
+   }
+  },
+  "steps": [
+   {
+    "ms": 600
+   }
+  ],
+  "crop": [
+   -0.07,
+   -0.15,
+   1.14,
+   1.15
+  ],
+  "out": "assets/img/art-phone.webp"
+ },
+ {
+  "name": "art-coin",
+  "w": 360,
+  "opts": {
+   "stance": "idle",
+   "yaw": 0.15,
+   "props": [
+    "coin"
+   ],
+   "posed": {
+    "aRx": -0.9,
+    "aLx": -0.9,
+    "aRz": -0.2,
+    "aLz": 0.2,
+    "happy": 1
+   }
+  },
+  "steps": [
+   {
+    "ms": 600
+   }
+  ],
+  "crop": [
+   -0.07,
+   -0.15,
+   1.14,
+   1.15
+  ],
+  "out": "assets/img/art-coin.webp"
+ },
+ {
+  "name": "cheer",
+  "w": 300,
+  "opts": {
+   "stance": "cheer",
+   "yaw": 0.15,
+   "posed": {
+    "mouth": 0.6
+   }
+  },
+  "steps": [
+   {
+    "ms": 600
+   }
+  ],
+  "crop": [
+   -0.07,
+   -0.15,
+   1.14,
+   1.15
+  ],
+  "out": "assets/img/cheer.webp"
+ },
+ {
+  "name": "peek",
+  "w": 300,
+  "opts": {
+   "stance": "idle",
+   "yaw": 0,
+   "posed": {
+    "aRx": -1.85,
+    "aLx": -1.85,
+    "aRz": -0.32,
+    "aLz": 0.32,
+    "eR": -0.35,
+    "eL": 0.35,
+    "spark": 0.6
+   }
+  },
+  "steps": [
+   {
+    "ms": 600
+   }
+  ],
+  "crop": [
+   -0.04,
+   -0.03,
+   1.08,
+   0.76
+  ],
+  "out": "assets/img/peek.webp"
+ },
+ {
+  "name": "poster-idle",
+  "w": 583,
+  "opts": {
+   "stance": "idle",
+   "yaw": 0.28
+  },
+  "steps": [
+   {
+    "ms": 16
+   }
+  ],
+  "out": "assets/mini-yaz/poster-idle.webp",
+  "quality": 0.88
+ },
+ {
+  "name": "poster-point",
+  "w": 583,
+  "opts": {
+   "stance": "point",
+   "yaw": 0.2,
+   "props": [
+    "laptop"
+   ]
+  },
+  "steps": [
+   {
+    "ms": 16
+   }
+  ],
+  "out": "assets/mini-yaz/poster-point.webp",
+  "quality": 0.88
+ },
+ {
+  "name": "poster-cheer",
+  "w": 583,
+  "opts": {
+   "stance": "cheer",
+   "yaw": 0.12,
+   "props": [
+    "shoes"
+   ]
+  },
+  "steps": [
+   {
+    "ms": 16
+   }
+  ],
+  "out": "assets/mini-yaz/poster-cheer.webp",
+  "quality": 0.88
+ },
+ {
+  "name": "poster-lost",
+  "w": 583,
+  "opts": {
+   "stance": "lost",
+   "yaw": 0.1,
+   "props": [
+    "map"
+   ]
+  },
+  "steps": [
+   {
+    "ms": 16
+   }
+  ],
+  "out": "assets/mini-yaz/poster-lost.webp",
+  "quality": 0.88
+ }
+]

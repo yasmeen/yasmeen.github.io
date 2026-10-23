@@ -1,0 +1,393 @@
+# Builds Mini Yaz in Blender from the measured turnaround (profiles.json) and renders checks against the drawing.
+# Blender is Z-up; Mini Yaz faces -Y. 1 unit = 170 px of the reference turnaround.
+import bpy, bmesh, json, math, sys, os, addon_utils
+import numpy as np
+from mathutils import Vector, Matrix
+
+ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
+HERE = os.path.dirname(os.path.abspath(__file__))
+OUT = ARGS[0] if ARGS else HERE
+P = json.load(open(os.path.join(HERE, 'profiles.json')))
+WEB = os.environ.get('WEB') == '1'      # lighter meshes for the browser, plus baked shading and a JSON export
+
+bpy.ops.wm.read_factory_settings(use_empty=True)
+addon_utils.enable('cycles', default_set=True)
+scene = bpy.context.scene
+
+def srgb(r, g, b):
+    f = lambda c: (c / 255) / 12.92 if c / 255 <= 0.04045 else (((c / 255) + 0.055) / 1.055) ** 2.4
+    return (f(r), f(g), f(b), 1.0)
+
+def mk(name, verts, faces, smooth=True):
+    me = bpy.data.meshes.new(name)
+    me.from_pydata([tuple(v) for v in verts], [], faces)
+    me.update()
+    bm = bmesh.new(); bm.from_mesh(me)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    # open surfaces (the hair) can come out inside-out: make sure normals face away from the middle
+    c = sum((v.co for v in bm.verts), Vector()) / max(1, len(bm.verts))
+    if sum((f.calc_center_median() - c).dot(f.normal) for f in bm.faces) < 0:
+        bmesh.ops.reverse_faces(bm, faces=bm.faces)
+    bm.to_mesh(me); bm.free()
+    me.polygons.foreach_set('use_smooth', [smooth] * len(me.polygons))
+    ob = bpy.data.objects.new(name, me)
+    scene.collection.objects.link(ob)
+    return ob
+
+def loft(name, rings, N=128):
+    """rings: list of (z, a, b, cy) top to bottom; a ring with a = b = 0 becomes a pole."""
+    verts, faces, idx = [], [], []
+    for (z, a, b, cy) in rings:
+        if a < 1e-5 and b < 1e-5:
+            idx.append([len(verts)]); verts.append((0, cy, z)); continue
+        s = len(verts)
+        for j in range(N):
+            t = 2 * math.pi * j / N
+            verts.append((a * math.cos(t), cy + b * math.sin(t), z))
+        idx.append(list(range(s, s + N)))
+    for i in range(len(idx) - 1):
+        r0, r1 = idx[i], idx[i + 1]
+        if len(r0) == 1 and len(r1) == 1: continue
+        if len(r0) == 1: faces += [(r0[0], r1[(j + 1) % N], r1[j]) for j in range(N)]
+        elif len(r1) == 1: faces += [(r0[j], r0[(j + 1) % N], r1[0]) for j in range(N)]
+        else: faces += [(r0[j], r0[(j + 1) % N], r1[(j + 1) % N], r1[j]) for j in range(N)]
+    return mk(name, verts, faces)
+
+def interp_rings(rings, u):
+    """continuous ring parameter u in [0, len-1] -> (z, a, b, cy)"""
+    u = max(0.0, min(len(rings) - 1.0, u)); i = min(int(u), len(rings) - 2); f = u - i
+    return tuple(rings[i][k] * (1 - f) + rings[i + 1][k] * f for k in range(4))
+
+def ring_point(rings, u, t):
+    z, a, b, cy = interp_rings(rings, u)
+    return Vector((a * math.cos(t), cy + b * math.sin(t), z))
+
+# ---------------- head ----------------
+H = P['head']
+# the drawing's outline includes the hair, so the head underneath sits one hair-thickness inside it
+HAIR_T = 0.04
+headRings = [(h['z'], max(0.0, h['a'] - HAIR_T) if h['a'] > 0 else 0.0, max(0.0, h['b'] - HAIR_T) if h['b'] > 0 else 0.0, -h['d']) for h in H]
+if WEB:
+    headRings = headRings[:-1:2] + [headRings[-1]]
+NH = 136 if WEB else 192
+head = loft('Head', headRings, NH)
+
+hx, hz = np.array(P['hairline']['x']), np.array(P['hairline']['z'])
+fz, fd = np.array(P['faceEdge']['z']), np.array(P['faceEdge']['d'])
+order = np.argsort(fz); fz, fd = fz[order], fd[order]
+def hairline_z(x):
+    if x < hx[0]: return hz[0] - (hx[0] - x) * 2.5      # past the measured edge the bob drops away
+    if x > hx[-1]: return hz[-1] - (x - hx[-1]) * 2.5
+    return float(np.interp(x, hx, hz))
+def face_edge_d(z):
+    # above the measured rows the side view only sees the fringe itself, so the front hairline decides there
+    if z > fz[-1]: return float(fd[-1])
+    return float(np.interp(z, fz, fd)) - 0.02
+def is_face(p):
+    X, Y, Z = p; D = -Y
+    return Z < hairline_z(X) and D > face_edge_d(Z)
+
+# ---------------- hair: a clay layer laid on the head, cut exactly along the fringe, with a rolled edge ----------------
+NM, M = (240, 52) if WEB else (320, 90)
+u_max = len(headRings) - 1.0
+def surf_normal(u, t):
+    e = 1e-3
+    du = ring_point(headRings, u + e, t) - ring_point(headRings, u - e, t)
+    dt = ring_point(headRings, u, t + e) - ring_point(headRings, u, t - e)
+    n = dt.cross(du).normalized()
+    z, a, b, cy = interp_rings(headRings, u)
+    outward = Vector((math.cos(t), math.sin(t), 0.0))
+    if n.dot(outward) < 0 and abs(math.cos(t)) + abs(math.sin(t)) > 0: n = -n
+    return n
+bounds = []
+for j in range(NM):
+    t = 2 * math.pi * j / NM
+    ub = None
+    steps = np.linspace(0.5, u_max - 3, 400)
+    for k in range(1, len(steps)):
+        if is_face(ring_point(headRings, steps[k], t)):
+            lo, hi = steps[k - 1], steps[k]
+            for _ in range(30):
+                mid = (lo + hi) / 2
+                if is_face(ring_point(headRings, mid, t)): hi = mid
+                else: lo = mid
+            ub = lo; break
+    bounds.append(ub if ub is not None else u_max - 0.6)
+# smooth the edge so the fringe reads as one clean rolled line
+bb = np.array(bounds); k = 2
+bounds = [float(np.mean([bb[(j + i) % NM] for i in range(-k, k + 1)])) if bb[j] < u_max - 1.0 else float(bb[j]) for j in range(NM)]
+THICK, LIP = 0.044, 0.05
+# the fringe edge as a 3D polyline, so the rolled lip can follow the true distance to it (not the distance along each strand line)
+edge_pts = [(j, ring_point(headRings, bounds[j], 2 * math.pi * j / NM)) for j in range(NM) if bounds[j] < u_max - 1.0]
+segA, segB = [], []
+for i in range(len(edge_pts)):
+    (j0, p0), (j1, p1) = edge_pts[i], edge_pts[(i + 1) % len(edge_pts)]
+    if (j1 - j0) % NM == 1: segA.append(p0[:]); segB.append(p1[:])
+segA, segB = np.array(segA), np.array(segB)
+def edge_dist(p):
+    q = np.array(p[:]); ab = segB - segA
+    t = np.clip(((q - segA) * ab).sum(1) / np.maximum((ab * ab).sum(1), 1e-12), 0, 1)
+    return float(np.sqrt((((segA + ab * t[:, None]) - q) ** 2).sum(1)).min())
+# every meridian shares the same rings over the crown (no pucker); below that they fan out to their own edge
+real = [b for b in bounds if b < u_max - 1.0]
+u_cap = 0.85 * min(real)
+K1, K3 = 16, 14
+EDGE_D = [LIP * 1.8 * (1 - i / (K3 - 1)) ** 1.6 for i in range(K3)]   # the last rows sit at fixed distances from the edge
+def u_for_dist(ub, t, d):
+    lo, hi = u_cap, ub
+    if edge_dist(ring_point(headRings, lo, t)) < d: return lo
+    for _ in range(22):
+        mid = (lo + hi) / 2
+        if edge_dist(ring_point(headRings, mid, t)) > d: lo = mid
+        else: hi = mid
+    return (lo + hi) / 2
+def meridian_us(ub, t, has_edge):
+    us = [u_cap * (k + 1) / K1 for k in range(K1)]                 # crown: shared rings
+    if not has_edge:
+        rest = M - K1
+        return us + [u_cap + (ub - u_cap) * (1 - (1 - (k + 1) / rest) ** 1.6) for k in range(rest)]
+    ue = [u_for_dist(ub, t, d) for d in EDGE_D]; ue[-1] = ub
+    for i in range(1, len(ue)): ue[i] = max(ue[i], ue[i - 1] + 1e-4)
+    mid = M - K1 - K3
+    u0 = ue[0]
+    us += [u_cap + (u0 - u_cap) * (k + 1) / (mid + 1) for k in range(mid)]
+    return us + ue
+hverts, hfaces = [], []
+top = ring_point(headRings, 0, 0)
+hverts.append(tuple(top + Vector((0, 0, THICK))))
+ring_ids = []
+for j in range(NM):
+    t = 2 * math.pi * j / NM
+    ub = bounds[j]
+    col = []
+    zs = []
+    US = meridian_us(ub, t, ub < u_max - 1.0)
+    for k in range(M):
+        zs.append(ring_point(headRings, US[k], t))
+    # arc length back from the edge
+    L = [0.0]
+    for k in range(len(zs) - 1, 0, -1): L.append(L[-1] + (zs[k] - zs[k - 1]).length)
+    L = L[::-1]
+    for k, p in enumerate(zs):
+        u = US[k]
+        n = surf_normal(max(u, 0.6), t)
+        dist = edge_dist(p) if len(segA) else 9.0
+        q = min(dist / LIP, 1.0)
+        h = THICK * math.sqrt(max(0.0, 1 - (1 - q) ** 2)) - 0.006 * (1 - q) ** 4
+        if bounds[j] >= u_max - 1.0: h = min(h, THICK * min(1.0, (u_max - u) / 6.0))   # the back: the hair tucks under the head
+        col.append(len(hverts)); hverts.append(tuple(p + n * h))
+    ring_ids.append(col)
+for j in range(NM):
+    a, b = ring_ids[j], ring_ids[(j + 1) % NM]
+    hfaces.append((0, b[0], a[0]))
+    for k in range(M - 1):
+        hfaces.append((a[k], b[k], b[k + 1], a[k + 1]))
+hair = mk('Hair', hverts, hfaces)
+
+# ---------------- bun ----------------
+BR, BZ, BD = P['bun']['r'], P['bun']['z'], P['bun']['d']
+nb = 36 if WEB else 64
+bunRings = [(BZ + BR * math.cos(math.pi * i / nb), BR * math.sin(math.pi * i / nb), BR * math.sin(math.pi * i / nb), -BD) for i in range(nb + 1)]
+bunRings[0] = (BZ + BR, 0, 0, -BD); bunRings[-1] = (BZ - BR, 0, 0, -BD)
+bun = loft('Bun', bunRings, 64 if WEB else 96)
+
+# ---------------- body: torso + legs fused into one soft clay surface ----------------
+U = 170.0
+D0 = -9.0 / U          # body sits a touch behind the head's center line
+def px_rings(rows, cx=0.0, cd=D0):
+    return [((588 - y) / U, a / U, b / U, -(cd)) for (y, a, b) in rows]
+def smooth_rows(rows, step=1.5):
+    """monotone cubic through the measured rows, so the surface has no kinks between them (no ridges)"""
+    ys = np.array([r[0] for r in rows], float)
+    def mono(vals):
+        v = np.array(vals, float); h = np.diff(ys); d = np.diff(v) / h
+        m = np.zeros_like(v)
+        for i in range(1, len(v) - 1):
+            if d[i - 1] * d[i] > 0:
+                w1, w2 = 2 * h[i] + h[i - 1], h[i] + 2 * h[i - 1]
+                m[i] = (w1 + w2) / (w1 / d[i - 1] + w2 / d[i])
+        def f(y):
+            i = min(max(np.searchsorted(ys, y) - 1, 0), len(ys) - 2)
+            t = (y - ys[i]) / h[i]; t2, t3 = t * t, t * t * t
+            return (2 * t3 - 3 * t2 + 1) * v[i] + (t3 - 2 * t2 + t) * h[i] * m[i] + (-2 * t3 + 3 * t2) * v[i + 1] + (t3 - t2) * h[i] * m[i + 1]
+        return f
+    fa, fb = mono([r[1] for r in rows]), mono([r[2] for r in rows])
+    out = [(y, max(0.0, fa(y)), max(0.0, fb(y))) for y in np.arange(ys[0], ys[-1], step)]
+    out[0] = (ys[0], 0, 0); out.append((ys[-1], 0, 0))
+    return out
+torsoRows = [(386, 0, 0), (388, 40, 26), (392, 58, 38), (398, 69, 45), (410, 76, 52), (425, 80, 58), (440, 83, 62), (460, 85, 66),
+             (480, 85.5, 67), (500, 84, 65), (515, 82, 62), (528, 80, 58), (538, 76, 54), (546, 66, 46), (552, 46, 32), (556, 0, 0)]
+torso = loft('Torso', px_rings(smooth_rows(torsoRows)), 128)
+legRows = [(506, 0, 0), (508, 30, 36), (513, 38, 46), (522, 41, 50), (560, 41, 50), (570, 39, 48), (578, 34, 42), (584, 25, 31), (587, 14, 18), (588.5, 0, 0)]
+legs = []
+for s, cx in ((-1, 139.5), (1, 222.5)):
+    lg = loft('Leg', px_rings(smooth_rows(legRows, 1.0)), 96)
+    lg.location.x = (cx - 181) / U
+    legs.append(lg)
+bpy.ops.object.select_all(action='DESELECT')
+for o in [torso] + legs: o.select_set(True)
+bpy.context.view_layer.objects.active = torso
+bpy.ops.object.join()
+body = torso; body.name = 'Body'
+body.data.remesh_voxel_size = 0.014 if WEB else 0.009
+bpy.ops.object.voxel_remesh()
+sm = body.modifiers.new('smooth', 'CORRECTIVE_SMOOTH') if False else body.modifiers.new('smooth', 'SMOOTH')
+sm.factor = 0.5; sm.iterations = 16
+bpy.ops.object.modifier_apply(modifier='smooth')
+if WEB:
+    dm = body.modifiers.new('dec', 'DECIMATE'); dm.ratio = min(1.0, 5200 / len(body.data.vertices))
+    bpy.ops.object.modifier_apply(modifier='dec')
+bpy.ops.object.shade_smooth()
+
+# ---------------- arms: teardrop mittens, pivot at the shoulder, hanging along -Z ----------------
+armProf = [(0.0, 0.0), (0.02, 0.07), (0.06, 0.1), (0.15, 0.115), (0.3, 0.135), (0.42, 0.158), (0.5, 0.17), (0.56, 0.166), (0.61, 0.14), (0.645, 0.09), (0.668, 0.0)]
+
+# resample the profile smoothly
+from mathutils import geometry
+def resample(prof, n=34 if WEB else 48):
+    ss = np.linspace(prof[0][0], prof[-1][0], n)
+    rs = np.interp(ss, [p[0] for p in prof], [p[1] for p in prof])
+    rs = np.convolve(np.pad(rs, 2, mode='edge'), np.ones(5) / 5, mode='valid')
+    rs[0] = 0; rs[-1] = 0
+    return [(-s, r, r * 1.12, 0.0) for s, r in zip(ss, rs)]
+arms = []
+for s in (-1, 1):
+    arm = loft('Arm', resample(armProf), 40 if WEB else 64)
+    arm.location = (0.43 * s, 0.04, 1.1)
+    arm.rotation_euler = (0, -math.radians(23) * s, 0)
+    arms.append(arm)
+
+# ---------------- face ----------------
+def front_point(X, Z):
+    """the head surface point seen from the front at (X, Z), and its normal"""
+    best = None
+    # ring parameter for this height
+    us = np.linspace(0, u_max, 2000)
+    zs = [interp_rings(headRings, u)[0] for u in us]
+    u = float(np.interp(-Z, [-z for z in zs], us))
+    z, a, b, cy = interp_rings(headRings, u)
+    c = max(-1.0, min(1.0, X / a))
+    t = -math.acos(c)                       # front half: sin(t) < 0 -> -Y
+    p = ring_point(headRings, u, t)
+    n = surf_normal(u, t)
+    return p, n
+E = P['eyes']
+eyes = []
+for s in (-1, 1):
+    p, n = front_point(E['x'] * s, E['z'])
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=32, radius=1.0)
+    eye = bpy.context.active_object; eye.name = 'Eye'
+    eye.scale = (E['rx'] * 1.08, E['rz'] * 1.02, 0.05)
+    rot = n.to_track_quat('Z', 'Y')
+    eye.rotation_mode = 'QUATERNION'; eye.rotation_quaternion = rot
+    eye.location = p - n * 0.016
+    bpy.ops.object.shade_smooth()
+    # highlight, upper right of each eye
+    hl_local = Vector((E['rx'] * 0.38, E['rz'] * 0.45, 0.05))
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=20, ring_count=12, radius=0.024)
+    g = bpy.context.active_object; g.name = 'Glint'
+    g.location = eye.location + rot @ hl_local
+    eyes.append((eye, g))
+Mo = P['mouth']
+pts = []
+for i in range(17):
+    u = i / 16 * 2 - 1
+    X = u * Mo['halfw'] * 1.08
+    Z = Mo['z'] - 0.014 + 0.05 * u * u
+    p, n = front_point(X, Z)
+    pts.append(p + n * 0.004)
+cu = bpy.data.curves.new('Smile', 'CURVE'); cu.dimensions = '3D'
+spl = cu.splines.new('POLY'); spl.points.add(len(pts) - 1)
+for i, q in enumerate(pts): spl.points[i].co = (q.x, q.y, q.z, 1)
+cu.bevel_depth = 0.019; cu.bevel_resolution = 6; cu.use_fill_caps = True
+smile = bpy.data.objects.new('Smile', cu); scene.collection.objects.link(smile)
+
+# blush lives in a color attribute on the head
+B = P['blush']
+hm = head.data
+attr = hm.color_attributes.new('blush', 'FLOAT_COLOR', 'POINT')
+for i, v in enumerate(hm.vertices):
+    X, Y, Z = v.co
+    w = 0.0
+    if -Y > 0.2:
+        for s in (-1, 1):
+            d = math.hypot(X - B['x'] * s, (Z - B['z']) * 1.05)
+            r = B['r'] * 1.45
+            w = max(w, min(1.0, 1.25 * max(0.0, 1 - d / r) ** 1.2))
+    attr.data[i].color = (w, w, w, 1)
+
+# ---------------- materials ----------------
+def principled(name, base, rough=0.8, sss=0.0, sheen=0.0, coat=0.0, spec=0.35, bump=0.0, emit=None):
+    m = bpy.data.materials.new(name); m.use_nodes = True
+    nt = m.node_tree; bsdf = nt.nodes.get('Principled BSDF')
+    def setin(k, v):
+        if k in bsdf.inputs: bsdf.inputs[k].default_value = v
+    setin('Base Color', base); setin('Roughness', rough); setin('Subsurface Weight', sss)
+    setin('Subsurface Radius', (1.0, 0.5, 0.35)); setin('Subsurface Scale', 0.06)
+    setin('Sheen Weight', sheen); setin('Sheen Roughness', 0.45); setin('Coat Weight', coat); setin('Specular IOR Level', spec)
+    if emit: setin('Emission Color', emit); setin('Emission Strength', 4.0)
+    if bump > 0:
+        nz = nt.nodes.new('ShaderNodeTexNoise'); nz.inputs['Scale'].default_value = 90.0; nz.inputs['Detail'].default_value = 8.0
+        bp = nt.nodes.new('ShaderNodeBump'); bp.inputs['Strength'].default_value = bump; bp.inputs['Distance'].default_value = 0.004
+        nt.links.new(nz.outputs['Fac'], bp.inputs['Height']); nt.links.new(bp.outputs['Normal'], bsdf.inputs['Normal'])
+    return m, nt, bsdf
+BLUE = srgb(70, 130, 207); CREAM = srgb(250, 235, 221); PINK = srgb(242, 158, 166)
+blueM, _, _ = principled('Clay Blue', BLUE, rough=0.72, sss=0.12, sheen=0.35, bump=0.12)
+faceM, fnt, fb = principled('Clay Face', CREAM, rough=0.68, sss=0.25, sheen=0.25, bump=0.05)
+ca = fnt.nodes.new('ShaderNodeVertexColor'); ca.layer_name = 'blush'
+mix = fnt.nodes.new('ShaderNodeMix'); mix.data_type = 'RGBA'
+mix.inputs[6].default_value = CREAM; mix.inputs[7].default_value = PINK
+fnt.links.new(ca.outputs['Color'], mix.inputs[0]); fnt.links.new(mix.outputs[2], fb.inputs['Base Color'])
+eyeM, _, _ = principled('Eye', srgb(18, 14, 13), rough=0.18, coat=1.0, spec=0.6)
+glintM, _, _ = principled('Glint', (1, 1, 1, 1), rough=0.3, emit=(1, 1, 1, 1))
+lineM, _, _ = principled('Line', srgb(30, 20, 18), rough=0.5)
+for o, mt in [(head, faceM), (hair, blueM), (bun, blueM), (body, blueM), (smile, lineM)] + [(a, blueM) for a in arms] + [(e, eyeM) for e, g in eyes] + [(g, glintM) for e, g in eyes]:
+    o.data.materials.clear(); o.data.materials.append(mt)
+
+# ---------------- light, world, render ----------------
+scene.render.engine = 'CYCLES'
+scene.cycles.device = 'CPU'
+scene.cycles.samples = int(os.environ.get('SAMPLES', '48'))
+try:
+    scene.cycles.use_denoising = True
+    scene.cycles.denoiser = 'OPENIMAGEDENOISE'
+except Exception as e: print('denoise', e)
+scene.render.film_transparent = True
+scene.view_settings.view_transform = 'Standard'
+world = bpy.data.worlds.new('World'); scene.world = world; world.use_nodes = True
+world.node_tree.nodes['Background'].inputs['Color'].default_value = (0.82, 0.86, 0.93, 1)
+world.node_tree.nodes['Background'].inputs['Strength'].default_value = 0.45
+def area(name, loc, size, power, color=(1, 1, 1)):
+    L = bpy.data.lights.new(name, 'AREA'); L.size = size; L.energy = power; L.color = color
+    o = bpy.data.objects.new(name, L); scene.collection.objects.link(o); o.location = loc
+    d = Vector((0, 0, 1.6)) - Vector(loc); o.rotation_euler = d.to_track_quat('-Z', 'Y').to_euler()
+    return o
+area('Key', (-4, -6, 7), 6, 520, (1, 0.98, 0.95))
+area('Fill', (5, -5, 3), 5, 150, (0.95, 0.97, 1))
+area('Top', (0, -1, 8), 6, 170)
+area('Rim', (3, 6, 5), 4, 200, (0.9, 0.94, 1))
+area('Front', (0.5, -9, 1.9), 4, 110, (1, 0.97, 0.93))
+
+def camera(name, loc, target, ortho=None, lens=85):
+    cd = bpy.data.cameras.new(name)
+    if ortho: cd.type = 'ORTHO'; cd.ortho_scale = ortho
+    else: cd.lens = lens
+    o = bpy.data.objects.new(name, cd); scene.collection.objects.link(o); o.location = loc
+    o.rotation_euler = (Vector(target) - Vector(loc)).to_track_quat('-Z', 'Y').to_euler()
+    return o
+REF_H = 622 / U
+camF = camera('Front', (-2 / U, -20, (588 - 311) / U), (-2 / U, 0, (588 - 311) / U), ortho=REF_H)
+camS = camera('Side', (-20, 5.5 / U, (588 - 311) / U), (0, 5.5 / U, (588 - 311) / U), ortho=REF_H)
+camH = camera('Hero', (4.6, -12.5, 2.6), (0, 0, 1.6), lens=100)
+
+def render(cam, path, w, h):
+    scene.camera = cam; scene.render.resolution_x = w; scene.render.resolution_y = h
+    scene.render.filepath = path; bpy.ops.render.render(write_still=True)
+if 'norender' not in ARGS:
+    render(camF, os.path.join(OUT, 'r_front.png'), 358, 622)
+    render(camS, os.path.join(OUT, 'r_side.png'), 358, 622)
+    render(camH, os.path.join(OUT, 'r_hero.png'), 600, 700)
+bpy.ops.wm.save_as_mainfile(filepath=os.path.join(OUT, 'miniyaz_web.blend' if WEB else 'miniyaz.blend'))
+if WEB:
+    exec(open(os.path.join(HERE, 'export_web.py')).read())
+print('done')

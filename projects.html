@@ -1,244 +1,168 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Yasmeen Roumie | Projects</title>
-	<meta name="description" content="Hackathon and side projects by Yasmeen Roumie.">
-
-	<!-- Facebook Meta Tags -->
-	<meta property="og:url" content="https://yasmeenroumie.com/projects.html">
-	<meta property="og:type" content="website">
-	<meta property="og:title" content="Yasmeen Roumie | Projects">
-	<meta property="og:description" content="Hackathon and side projects by Yasmeen Roumie.">
-	<meta property="og:image" content="https://yasmeenroumie.com/static/img/og-image.png">
-	<meta property="og:image:width" content="1200">
-	<meta property="og:image:height" content="630">
-	<meta property="og:image:alt" content="Yasmeen Roumie, software engineer, with her bitmoji">
-
-	<!-- Twitter Meta Tags -->
-	<meta name="twitter:card" content="summary_large_image">
-	<meta property="twitter:domain" content="yasmeenroumie.com">
-	<meta property="twitter:url" content="https://yasmeenroumie.com/projects.html">
-	<meta name="twitter:title" content="Yasmeen Roumie | Projects">
-	<meta name="twitter:description" content="Hackathon and side projects by Yasmeen Roumie.">
-	<meta name="twitter:image" content="https://yasmeenroumie.com/static/img/og-image.png">
-
-	<link rel="icon" href="/static/img/favicon.ico" sizes="any">
-	<link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32.png">
-	<link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
-
-	<link rel="preload" href="static/fonts/FamiljenGrotesk-400.woff2" as="font" type="font/woff2" crossorigin>
-	<link rel="preload" href="static/fonts/FamiljenGrotesk-600.woff2" as="font" type="font/woff2" crossorigin>
-	<link rel="stylesheet" href="static/css/site.css">
-	<script src="static/js/nav.js" defer></script>
-
-	<!-- Global site tag (gtag.js) - Google Analytics -->
-	<script async src="https://www.googletagmanager.com/gtag/js?id=UA-73710322-1"></script>
-	<script>
-	  window.dataLayer = window.dataLayer || [];
-	  function gtag(){dataLayer.push(arguments);}
-	  gtag('js', new Date());
-
-	  gtag('config', 'UA-73710322-1');
-	</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Projects · Yasmeen Roumie</title>
+<meta name="description" content="Side projects by Yasmeen Roumie, usually built with whatever had just come out: NYC Run Clubs, QuantumCoupon AI, Fizz Filter, PillAR, Mintaro.">
+<link rel="canonical" href="https://yasmeenroumie.com/projects">
+<meta name="theme-color" content="#FFFFFF">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Yasmeen Roumie">
+<meta property="og:url" content="https://yasmeenroumie.com/projects">
+<meta property="og:title" content="Projects · Yasmeen Roumie">
+<meta property="og:description" content="Side projects by Yasmeen Roumie, usually built with whatever had just come out: NYC Run Clubs, QuantumCoupon AI, Fizz Filter, PillAR, Mintaro.">
+<meta property="og:image" content="https://yasmeenroumie.com/assets/img/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Mini Yaz, a little blue clay version of Yasmeen, waving beside the name Yasmeen Roumie">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Projects · Yasmeen Roumie">
+<meta name="twitter:description" content="Side projects by Yasmeen Roumie, usually built with whatever had just come out: NYC Run Clubs, QuantumCoupon AI, Fizz Filter, PillAR, Mintaro.">
+<meta name="twitter:image" content="https://yasmeenroumie.com/assets/img/og.png">
+<link rel="icon" href="/static/img/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32.png">
+<link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+<link rel="preload" href="/assets/fonts/InstrumentSerif-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/css/site.css">
+<script>(function(){var d=document.documentElement,g=function(k){try{return localStorage.getItem(k)}catch(e){return null}},a=g('appearance');d.dataset.appearance=a==='blue'||a==='graphite'?a:(matchMedia('(prefers-color-scheme: dark)').matches?'graphite':'blue');d.dataset.motion=g('motion')==='paused'?'paused':'on'})();</script>
+<link rel="modulepreload" href="/assets/mini-yaz/mascot.js">
+<script type="module" src="/assets/mini-yaz/mascot.js"></script>
+<script src="/assets/js/site.js" defer></script>
 </head>
 <body>
-
-<!--SPRITE:START-->
-<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
-  <symbol id="i-github" viewBox="0 0 256 256"><path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z"/></symbol>
-  <symbol id="i-linkedin" viewBox="0 0 256 256"><path d="M216,24H40A16,16,0,0,0,24,40V216a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V40A16,16,0,0,0,216,24Zm0,192H40V40H216V216ZM96,112v64a8,8,0,0,1-16,0V112a8,8,0,0,1,16,0Zm88,28v36a8,8,0,0,1-16,0V140a20,20,0,0,0-40,0v36a8,8,0,0,1-16,0V112a8,8,0,0,1,15.79-1.78A36,36,0,0,1,184,140ZM100,84A12,12,0,1,1,88,72,12,12,0,0,1,100,84Z"/></symbol>
-  <symbol id="i-mail" viewBox="0 0 256 256"><path d="M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48ZM203.43,64,128,133.15,52.57,64ZM216,192H40V74.19l82.59,75.71a8,8,0,0,0,10.82,0L216,74.19V192Z"/></symbol>
-  <symbol id="i-pin" viewBox="0 0 256 256"><path d="M128,64a40,40,0,1,0,40,40A40,40,0,0,0,128,64Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,128Zm0-112a88.1,88.1,0,0,0-88,88c0,31.4,14.51,64.68,42,96.25a254.19,254.19,0,0,0,41.45,38.3,8,8,0,0,0,9.18,0A254.19,254.19,0,0,0,174,200.25c27.45-31.57,42-64.85,42-96.25A88.1,88.1,0,0,0,128,16Zm0,206c-16.53-13-72-60.75-72-118a72,72,0,0,1,144,0C200,161.23,144.53,209,128,222Z"/></symbol>
-  <symbol id="i-calendar" viewBox="0 0 256 256"><path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32ZM72,48v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V80H48V48ZM208,208H48V96H208V208Z"/></symbol>
-  <symbol id="i-menu" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM40,72H216a8,8,0,0,0,0-16H40a8,8,0,0,0,0,16ZM216,184H40a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Z"/></symbol>
-  <symbol id="i-close" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></symbol>
-  <symbol id="i-arrow" viewBox="0 0 256 256"><path d="M204,64V168a12,12,0,0,1-24,0V93L72.49,200.49a12,12,0,0,1-17-17L163,76H88a12,12,0,0,1,0-24H192A12,12,0,0,1,204,64Z"/></symbol>
-</svg>
-<!--SPRITE:END-->
-
-<header class="sticky top-0 z-40 border-b border-border bg-bg/80 backdrop-blur-md">
-	<nav class="mx-auto flex h-16 max-w-4xl items-center justify-between gap-4 px-5" aria-label="Main">
-		<a href="index" class="text-base font-semibold tracking-tight hover:text-accent transition-colors">yasmeen roumie</a>
-
-		<div class="hidden items-center gap-1 sm:flex">
-			<a href="index" class="rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-fg">Work</a>
-			<a href="projects" aria-current="page" class="rounded-lg bg-surface-2 px-3 py-1.5 text-sm font-medium">Projects</a>
-			<a href="about" class="rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-fg">About</a>
-		</div>
-
-		<button type="button" class="btn-icon -mr-2 hidden sm:hidden" data-nav-toggle aria-controls="site-menu" aria-expanded="false" aria-label="Menu">
-			<svg class="icon text-xl" aria-hidden="true"><use href="#i-menu"></use></svg>
-		</button>
-	</nav>
-
-	<div id="site-menu" class="border-t border-border sm:hidden" data-nav-menu>
-		<div class="mx-auto flex max-w-4xl flex-col px-5 py-2">
-			<a href="index" class="rounded-lg px-3 py-2.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-fg">Work</a>
-			<a href="projects" aria-current="page" class="rounded-lg px-3 py-2.5 text-sm font-medium">Projects</a>
-			<a href="about" class="rounded-lg px-3 py-2.5 text-sm text-muted transition-colors hover:bg-surface-2 hover:text-fg">About</a>
-		</div>
-	</div>
+<a class="skip" href="#main">Skip to content</a>
+<header class="masthead">
+  <a class="titlebar" href="/"><img src="/assets/img/peek.webp" alt="" width="324" height="268"><b>Yasmeen Roumie</b><span>· Projects</span></a>
+  <nav class="tabs" aria-label="Main">
+    <a class="tab tab--home" href="/" aria-label="Home"><img src="/assets/img/peek.webp" alt="" width="324" height="268"></a>
+    <a class="tab" href="/work">Work</a>
+    <a class="tab" href="/projects" aria-current="page">Projects</a>
+    <a class="tab" href="/lab">Lab</a>
+    <a class="tab" href="/about">About</a>
+  </nav>
+  <div class="subnav">
+    <div class="wrap">
+      <a href="#nycrun">NYC Run Clubs</a>
+      <a href="#quantum">QuantumCoupon AI</a>
+      <a href="#fizz">Fizz Filter</a>
+      <a href="#pillar">PillAR</a>
+      <a href="#mintaro">Mintaro</a>
+    </div>
+  </div>
 </header>
 
-<main class="mx-auto max-w-4xl px-5 pb-24 pt-12 sm:pt-16">
+<main id="main">
 
-	<section class="rise flow-root">
-	<img src="static/img/hey_bitmoji_trim.png" alt="Bitmoji of Yasmeen waving"
-		width="297" height="341"
-		class="float-right mb-1 ml-2 h-32 w-auto sm:ml-8 sm:h-48 lg:h-64">
-		<div>
-			<h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">Hi, I'm Yasmeen!</h1>
+<section class="page-hero">
+  <div class="mascot-slot">
+<div class="mini-yaz mini-yaz--main" data-pose="cheer" data-props="shoes" role="group" aria-label="Mini Yaz, cheering with both arms up, in running shoes">
+  <img class="yaz-poster" src="/assets/mini-yaz/poster-cheer.webp" alt="" width="816" height="890" draggable="false" fetchpriority="high">
+  <span class="yaz-z" aria-hidden="true"><i>z</i><i>z</i><i>z</i></span>
+  <button type="button" class="yaz-hit" aria-label="Tap Mini Yaz"></button>
+</div></div>
+  <div class="copy">
+    <h1>Things I've built.</h1>
+    <p>Side projects and experiments, usually with whatever had just come out.</p>
+    <p class="yaz-hint"><span>Tap or drag Mini Yaz</span><button type="button" class="mini-btn" data-motion-toggle aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" class="i-pause"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg><svg viewBox="0 0 24 24" aria-hidden="true" class="i-play"><path d="M7 4v16l13-8z"/></svg><span data-motion-label>Pause motion</span></button></p>
+  </div>
+</section>
 
-			<p class="mt-4 max-w-[56ch] leading-relaxed text-muted">
-				I'm a hackathon-obsessed software engineer exploring fun &amp; futuristic ideas. I previously worked at
-				<a class="sweep sweep-hook" href="https://hook.xyz">Hook</a>,
-				<a class="sweep sweep-oscar" href="https://www.hioscar.com/">Oscar Health</a>,
-				<a class="sweep sweep-gs" href="https://www.goldmansachs.com/">GS</a>,
-				<a class="sweep sweep-celo" href="https://celo.org">Celo</a>,
-				<a class="sweep sweep-tinder" href="https://tinder.com">Tinder</a>,
-				<a class="sweep sweep-snapchat" href="https://snapchat.com">Snapchat</a>, and
-				<a class="sweep sweep-nasa" href="https://nasa.gov">NASA</a>.
-			</p>
+<section class="projects" aria-label="Projects">
+  <a class="project" id="nycrun" href="https://nycrunclubs.com" data-yaz="cheer">
+    <span class="window">
+      <span class="window-bar"><span class="lights" aria-hidden="true"><span></span><span></span><span></span></span><span class="title">NYC Run Clubs</span></span>
+      <span class="art" style="--art: #E9EE86"><img src="/assets/img/art-run.webp" alt="" width="600" height="600" loading="lazy"><span class="badge badge--live" style="--badge-dot: #2E9B4F; --badge-ink: #1F5B30">Live</span></span>
+      <span class="project-text">
+        <span class="project-head"><b>NYC Run Clubs</b><span>2023 – now</span></span>
+        <span class="project-what">The go-to information hub for the NYC running community.</span>
+        <span class="chips"><span class="chip">Web</span><span class="chip">Community</span></span>
+        <span class="cta">Visit the site ›</span>
+      </span>
+    </span>
+  </a>
+  <a class="project" id="quantum" href="https://groupon-quantum-coupon.vercel.app/" data-yaz="cheer">
+    <span class="window">
+      <span class="window-bar"><span class="lights" aria-hidden="true"><span></span><span></span><span></span></span><span class="title">QuantumCoupon AI</span></span>
+      <span class="art" style="--art: #F8D3DD"><img src="/assets/img/art-trophy.webp" alt="" width="600" height="600" loading="lazy"><span class="badge" style="--badge-dot: #C24D72; --badge-ink: #7E2241">Won Groupon's Sales Automation Competition</span></span>
+      <span class="project-text">
+        <span class="project-head"><b>QuantumCoupon AI</b><span>Jan 2024</span></span>
+        <span class="project-what">AI-powered sales outreach for Groupon's sales team.</span>
+        <span class="chips"><span class="chip">AI</span><span class="chip">Sales tools</span></span>
+        <span class="cta">See it ›</span>
+      </span>
+    </span>
+  </a>
+  <a class="project" id="fizz" href="https://bit.ly/fizz-filter" data-yaz="ooh">
+    <span class="window">
+      <span class="window-bar"><span class="lights" aria-hidden="true"><span></span><span></span><span></span></span><span class="title">Fizz Filter</span></span>
+      <span class="art" style="--art: #CFE6FF"><img src="/assets/img/art-visor.webp" alt="" width="600" height="600" loading="lazy"><span class="badge" style="--badge-dot: #2F7FE0; --badge-ink: #0E3F86">Reality Virtually Hackathon</span></span>
+      <span class="project-text">
+        <span class="project-head"><b>Fizz Filter</b><span>Oct 2016</span></span>
+        <span class="project-what">Scan a room, then re-theme its walls and furniture in mixed reality. Built on HoloLens the year it shipped to developers.</span>
+        <span class="chips"><span class="chip">HoloLens</span><span class="chip">Mixed reality</span></span>
+        <span class="cta">Watch it ›</span>
+      </span>
+    </span>
+  </a>
+  <a class="project" id="pillar" href="https://bit.ly/pill-AR" data-yaz="cheer">
+    <span class="window">
+      <span class="window-bar"><span class="lights" aria-hidden="true"><span></span><span></span><span></span></span><span class="title">PillAR</span></span>
+      <span class="art" style="--art: #CBD1EC"><img src="/assets/img/art-phone.webp" alt="" width="600" height="600" loading="lazy"><span class="badge" style="--badge-dot: #36436F; --badge-ink: #1E2645">2nd place, PennApps XVI</span></span>
+      <span class="project-text">
+        <span class="project-head"><b>PillAR</b><span>Sep 2017</span></span>
+        <span class="project-what">Reads pill bottles with computer vision and tracks your medication in AR.</span>
+        <span class="chips"><span class="chip">iOS</span><span class="chip">AR</span><span class="chip">Computer vision</span></span>
+        <span class="cta">See it ›</span>
+      </span>
+    </span>
+  </a>
+  <a class="project" id="mintaro" href="https://mintaro.app" data-yaz="ooh">
+    <span class="window">
+      <span class="window-bar"><span class="lights" aria-hidden="true"><span></span><span></span><span></span></span><span class="title">Mintaro</span></span>
+      <span class="art" style="--art: #F4E2B8"><img src="/assets/img/art-coin.webp" alt="" width="600" height="600" loading="lazy"></span>
+      <span class="project-text">
+        <span class="project-head"><b>Mintaro</b><span>2022</span></span>
+        <span class="project-what">Crypto payment links on Solana Pay, built the year it launched.</span>
+        <span class="chips"><span class="chip">Solana Pay</span><span class="chip">Crypto</span></span>
+        <span class="cta">Visit the site ›</span>
+      </span>
+    </span>
+  </a>
+</section>
 
-			<div class="-ml-2 mt-3 flex flex-wrap items-center">
-				<a class="btn-icon size-10" href="https://bit.ly/yasmeen-github" aria-label="GitHub">
-					<svg class="icon text-2xl" aria-hidden="true"><use href="#i-github"></use></svg>
-				</a>
-				<a class="btn-icon size-10" href="https://bit.ly/yasmeen-linkedin" aria-label="LinkedIn">
-					<svg class="icon text-2xl" aria-hidden="true"><use href="#i-linkedin"></use></svg>
-				</a>
-				<a class="btn-icon size-10" href="mailto:yasmeen.roumie@gmail.com" aria-label="Email">
-					<svg class="icon text-2xl" aria-hidden="true"><use href="#i-mail"></use></svg>
-				</a>
-			</div>
-
-			<p class="mt-1 flex items-center gap-1.5 text-sm text-muted">
-				<svg class="icon" aria-hidden="true"><use href="#i-pin"></use></svg>
-				New York, NY
-			</p>
-		</div>
-
-	</section>
-
-	<div class="mt-16 grid gap-4 sm:mt-20 sm:grid-cols-2">
-
-		<a class="card-link group sm:col-span-2" href="https://nycrunclubs.com">
-			<article class="card flex h-full items-start gap-4 p-5">
-				<div class="min-w-0">
-					<h2 class="flex items-center gap-1.5 font-semibold tracking-tight">
-						NYC Run Clubs
-						<svg class="icon text-xs text-muted transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true"><use href="#i-arrow"></use></svg>
-					</h2>
-					<p class="mt-1 font-mono text-xs text-muted">2023 - now</p>
-					<p class="mt-2 text-sm leading-relaxed text-muted">The go-to information hub for the NYC running community.</p>
-				</div>
-			</article>
-		</a>
-
-		<a class="card-link group" href="https://groupon-quantum-coupon.vercel.app/">
-			<article class="card flex h-full items-start gap-4 p-5">
-				<div class="min-w-0">
-					<h2 class="flex items-center gap-1.5 font-semibold tracking-tight">
-						QuantumCoupon AI
-						<svg class="icon text-xs text-muted transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true"><use href="#i-arrow"></use></svg>
-					</h2>
-					<p class="mt-1 font-mono text-xs text-muted">Jan 2024 &middot; Groupon Innovators Challenge <img class="emoji" src="static/img/emoji/1f3c6.png" alt="" aria-hidden="true" width="64" height="64"></p>
-					<p class="mt-2 text-sm leading-relaxed text-muted">AI-powered sales outreach tool for Groupon's sales team. Winner of Groupon's Sales Automation Competition.</p>
-					<ul class="mt-3 flex flex-wrap gap-1.5">
-						<li class="tag">AI</li>
-					</ul>
-				</div>
-			</article>
-		</a>
-
-		<a class="card-link group" href="https://mintaro.app">
-			<article class="card flex h-full items-start gap-4 p-5">
-				<div class="min-w-0">
-					<h2 class="flex items-center gap-1.5 font-semibold tracking-tight">
-						Mintaro
-						<svg class="icon text-xs text-muted transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true"><use href="#i-arrow"></use></svg>
-					</h2>
-					<p class="mt-1 font-mono text-xs text-muted">Spring 2022</p>
-					<p class="mt-2 text-sm leading-relaxed text-muted">Crypto payment links using Solana Pay.</p>
-					<ul class="mt-3 flex flex-wrap gap-1.5">
-						<li class="tag">Web3</li>
-					</ul>
-				</div>
-			</article>
-		</a>
-
-		<a class="card-link group" href="https://bit.ly/cram-app">
-			<article class="card flex h-full items-start gap-4 p-5">
-				<div class="min-w-0">
-					<h2 class="flex items-center gap-1.5 font-semibold tracking-tight">
-						Cram
-						<svg class="icon text-xs text-muted transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true"><use href="#i-arrow"></use></svg>
-					</h2>
-					<p class="mt-1 font-mono text-xs text-muted">Dec 2017 &middot; YHack <img class="emoji" src="static/img/emoji/1f3c6.png" alt="" aria-hidden="true" width="64" height="64"></p>
-					<p class="mt-2 text-sm leading-relaxed text-muted">Multiplayer trivia app with questions generated based on course lectures/notes.</p>
-				</div>
-			</article>
-		</a>
-
-		<a class="card-link group" href="https://bit.ly/radAR-app">
-			<article class="card flex h-full items-start gap-4 p-5">
-				<div class="min-w-0">
-					<h2 class="flex items-center gap-1.5 font-semibold tracking-tight">
-						radAR
-						<svg class="icon text-xs text-muted transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true"><use href="#i-arrow"></use></svg>
-					</h2>
-					<p class="mt-1 font-mono text-xs text-muted">Sep 2017 &middot; MHacks X <img class="emoji" src="static/img/emoji/1f3c6.png" alt="" aria-hidden="true" width="64" height="64"></p>
-					<p class="mt-2 text-sm leading-relaxed text-muted">Augmented reality iOS app that displays Yelp rating and Facebook check-in info above detected storefronts.</p>
-					<ul class="mt-3 flex flex-wrap gap-1.5">
-						<li class="tag">Augmented Reality</li>
-					</ul>
-				</div>
-			</article>
-		</a>
-
-		<a class="card-link group" href="https://bit.ly/pill-AR">
-			<article class="card flex h-full items-start gap-4 p-5">
-				<div class="min-w-0">
-					<h2 class="flex items-center gap-1.5 font-semibold tracking-tight">
-						PillAR
-						<svg class="icon text-xs text-muted transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true"><use href="#i-arrow"></use></svg>
-					</h2>
-					<p class="mt-1 font-mono text-xs text-muted">Sep 2017 &middot; PennApps XVI <img class="emoji" src="static/img/emoji/1f3c6.png" alt="" aria-hidden="true" width="64" height="64"></p>
-					<p class="mt-2 text-sm leading-relaxed text-muted">Augmented reality iOS app that uses computer vision to identify text on pill bottles and track medication usage.</p>
-					<ul class="mt-3 flex flex-wrap gap-1.5">
-						<li class="tag">Augmented Reality</li>
-					</ul>
-				</div>
-			</article>
-		</a>
-
-		<a class="card-link group" href="https://bit.ly/fizz-filter">
-			<article class="card flex h-full items-start gap-4 p-5">
-				<div class="min-w-0">
-					<h2 class="flex items-center gap-1.5 font-semibold tracking-tight">
-						Fizz Filter
-						<svg class="icon text-xs text-muted transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true"><use href="#i-arrow"></use></svg>
-					</h2>
-					<p class="mt-1 font-mono text-xs text-muted">Oct 2016 &middot; Reality Virtually Hackathon</p>
-					<p class="mt-2 text-sm leading-relaxed text-muted">Mixed reality HoloLens app that allows users to scan a room and virtually apply a theme to the walls and furniture.</p>
-					<ul class="mt-3 flex flex-wrap gap-1.5">
-						<li class="tag">Augmented Reality</li>
-					</ul>
-				</div>
-			</article>
-		</a>
-
-	</div>
+<section class="more"><p>More on the way as I polish older projects. Meanwhile, there are small experiments in the <a href="/lab">Lab</a>.</p></section>
 </main>
 
-<footer class="border-t border-border">
-	<div class="mx-auto flex max-w-4xl flex-col items-center gap-1 px-5 py-10 text-sm text-muted">
-		<p>Made with <img class="emoji" src="static/img/emoji/1f496.png" alt="" aria-hidden="true" width="64" height="64"><span class="sr-only">love</span></p>
-		<p>&copy; <a class="marker" href="https://github.com/yasmeen">YR</a> <span data-year>2026</span></p>
-	</div>
+<footer class="footer">
+  <div class="wrap">
+    <p class="footer-links">
+      <a href="/">Home</a>
+      <a href="/work">Work</a>
+      <a href="/projects">Projects</a>
+      <a href="/lab">Lab</a>
+      <a href="/about">About</a>
+      <a href="https://github.com/yasmeen">GitHub</a>
+      <a href="https://bit.ly/yasmeen-linkedin">LinkedIn</a>
+    </p>
+    <div class="footer-prefs">
+      <span><span id="appearance-label">Appearance</span>
+        <span class="seg" role="group" aria-labelledby="appearance-label">
+          <button type="button" data-appearance-option="auto" aria-pressed="true">Auto</button><button type="button" data-appearance-option="blue" aria-pressed="false">Blue</button><button type="button" data-appearance-option="graphite" aria-pressed="false">Graphite</button>
+        </span>
+      </span>
+      <button type="button" class="mini-btn" data-motion-toggle aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" class="i-pause"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg><svg viewBox="0 0 24 24" aria-hidden="true" class="i-play"><path d="M7 4v16l13-8z"/></svg><span data-motion-label>Pause motion</span></button>
+    </div>
+    <p class="copy">Copyright © 2026 Yasmeen Roumie. Made with love in Miami, FL.</p>
+  </div>
 </footer>
 
+<nav class="dock" aria-label="Main">
+  <a href="/"><span class="dock-icon dock-icon--home"><img src="/assets/img/peek.webp" alt="" width="324" height="268"></span>Home</a>
+  <a href="/work"><span class="dock-icon gel-blue"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg></span>Work</a>
+  <a href="/projects" aria-current="page"><span class="dock-icon gel-orange"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 12-8.4 8.4a1.5 1.5 0 0 1-3-3L12 9"/><path d="m18 15 4-4"/><path d="m21.5 11.5-1.9-1.9a2 2 0 0 1-.6-1.4V7l-2.3-2.3A6 6 0 0 0 12.5 3H9l.9.8A6.2 6.2 0 0 1 12 8.4V10l2 2h1.2a2 2 0 0 1 1.4.6l1.9 1.9"/></svg></span>Projects</a>
+  <a href="/lab"><span class="dock-icon gel-purple"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2v7.5a2 2 0 0 1-.2.9L4.7 20.5a1 1 0 0 0 .9 1.5h12.8a1 1 0 0 0 .9-1.5l-5.1-10.1a2 2 0 0 1-.2-.9V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg></span>Lab</a>
+  <a href="/about"><span class="dock-icon gel-green"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg></span>About</a>
+</nav>
 </body>
 </html>

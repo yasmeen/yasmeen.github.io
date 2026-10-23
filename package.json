@@ -3,10 +3,12 @@
   "version": "1.0.0",
   "description": "Source for yasmeenroumie.com",
   "scripts": {
-    "build:icons": "node scripts/build-icons.mjs",
-    "build:css": "tailwindcss -i src/input.css -o static/css/site.css --minify",
-    "build": "npm run build:icons && npm run build:css",
-    "watch": "tailwindcss -i src/input.css -o static/css/site.css --watch"
+    "build": "node scripts/build-site.mjs",
+    "build:three": "esbuild mini-yaz/tools/three-entry.js --bundle --format=esm --minify --outfile=assets/mini-yaz/three.min.js",
+    "build:model": "node mini-yaz/tools/pack-model.mjs",
+    "serve": "http-server . -p 8130 -c-1 -e html",
+    "render:art": "node mini-yaz/tools/render.mjs mini-yaz/tools/art.json",
+    "render:og": "node mini-yaz/tools/og.mjs"
   },
   "repository": {
     "type": "git",
@@ -17,12 +19,10 @@
   },
   "homepage": "https://github.com/yasmeen/yasmeen.github.io#readme",
   "devDependencies": {
-    "@tailwindcss/cli": "^4.3.3",
-    "tailwindcss": "^4.3.3"
-  },
-  "dependencies": {
-    "@phosphor-icons/core": "^2.1.1",
-    "geist": "^1.7.2"
+    "esbuild": "^0.25.12",
+    "http-server": "^14.1.1",
+    "playwright": "^1.56.1",
+    "three": "0.169.0"
   },
   "private": true
 }
