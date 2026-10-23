@@ -1,0 +1,68 @@
+<!doctype html>
+<!-- The look tuner's page: renders Mini Yaz from the front and the side, lines each view up with the reference, and
+     scores the color difference (average Lab difference after a slight blur, so texture doesn't count). Driven by tune.mjs. -->
+<meta charset="utf-8">
+<style>body{margin:0;background:#fff} .box{position:absolute;width:300px;aspect-ratio:292/343} #b0{left:60px;top:106px} #b1{left:520px;top:106px}</style>
+<div class="box" id="b0"></div><div class="box" id="b1"></div>
+<script type="module">
+import { createMiniYaz } from '/assets/mini-yaz/engine.js';
+import { loadThree, loadModel } from '/assets/mini-yaz/mascot.js';
+const H = 300;
+const img = (src) => new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = j; i.src = src; });
+const toLab = (r, g, b) => {
+  const f = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  const R = f(r), G = f(g), B = f(b);
+  let X = (R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047, Y = R * 0.2126 + G * 0.7152 + B * 0.0722, Z = (R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883;
+  const h = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+  X = h(X); Y = h(Y); Z = h(Z);
+  return [116 * Y - 16, 500 * (X - Y), 200 * (Y - Z)];
+};
+// crop to the figure, scale to H px tall, blur a little, convert to Lab
+const prep = (source, sw, sh) => {
+  const c = document.createElement('canvas'); c.width = sw; c.height = sh;
+  const x = c.getContext('2d'); x.drawImage(source, 0, 0, sw, sh);
+  const d = x.getImageData(0, 0, sw, sh).data;
+  let x0 = sw, y0 = sh, x1 = 0, y1 = 0;
+  for (let y = 0; y < sh; y++) for (let i = 0; i < sw; i++) if (d[(y * sw + i) * 4 + 3] > 40) { if (i < x0) x0 = i; if (i > x1) x1 = i; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  const w = Math.round((x1 - x0 + 1) * H / (y1 - y0 + 1));
+  const o = document.createElement('canvas'); o.width = w; o.height = H;
+  const ox = o.getContext('2d'); ox.imageSmoothingQuality = 'high'; ox.drawImage(c, x0, y0, x1 - x0 + 1, y1 - y0 + 1, 0, 0, w, H);
+  const p = ox.getImageData(0, 0, w, H).data;
+  const L = new Float32Array(w * H * 3), A = new Float32Array(w * H);
+  for (let k = 0; k < w * H; k++) { const lab = toLab(p[k * 4], p[k * 4 + 1], p[k * 4 + 2]); L.set(lab, k * 3); A[k] = p[k * 4 + 3] / 255; }
+  const blur = (arr, ch, r) => {   // two box passes each way
+    const t = new Float32Array(arr.length);
+    for (let pass = 0; pass < 2; pass++) {
+      for (let y = 0; y < H; y++) for (let i = 0; i < w; i++) for (let q = 0; q < ch; q++) { let s = 0, n = 0; for (let k = -r; k <= r; k++) { const ii = i + k; if (ii >= 0 && ii < w) { s += arr[(y * w + ii) * ch + q]; n++; } } t[(y * w + i) * ch + q] = s / n; }
+      for (let y = 0; y < H; y++) for (let i = 0; i < w; i++) for (let q = 0; q < ch; q++) { let s = 0, n = 0; for (let k = -r; k <= r; k++) { const yy = y + k; if (yy >= 0 && yy < H) { s += t[(yy * w + i) * ch + q]; n++; } } arr[(y * w + i) * ch + q] = s / n; }
+    }
+  };
+  blur(L, 3, 2); blur(A, 1, 2);
+  return { L, A, w };
+};
+const err = (ref, ren) => {
+  let s = 0, n = 0;
+  for (let y = 0; y < H; y++) for (let i = 0; i < ref.w; i++) {
+    const k = y * ref.w + i, j = y * ren.w + Math.min(ren.w - 1, Math.round(i * ren.w / ref.w));
+    if (ref.A[k] < 0.98 || ren.A[j] < 0.98) continue;
+    const dl = ref.L[k * 3] - ren.L[j * 3], da = ref.L[k * 3 + 1] - ren.L[j * 3 + 1], db = ref.L[k * 3 + 2] - ren.L[j * 3 + 2];
+    s += Math.sqrt(dl * dl + da * da + db * db); n++;
+  }
+  return s / n;
+};
+const [THREE, data, rf, rs] = await Promise.all([loadThree(), loadModel(), img('/mini-yaz/reference/turn-front.png'), img('/mini-yaz/reference/turn-side.png')]);
+const refs = [prep(rf, rf.width, rf.height), prep(rs, rs.width, rs.height)];
+const views = [
+  createMiniYaz(THREE, document.getElementById('b0'), data, { manual: true, preserve: true, maxDpr: 1, sleepAfter: 0, yaw: 0 }),
+  createMiniYaz(THREE, document.getElementById('b1'), data, { manual: true, preserve: true, maxDpr: 1, sleepAfter: 0, yaw: Math.PI / 2 })
+];
+views.forEach((v) => v.step(16));
+const score = (look) => {
+  let e = 0;
+  views.forEach((v, i) => { v.setLook(look); const c = v.canvas; e += err(refs[i], prep(c, c.width, c.height)); });
+  return e / views.length;
+};
+window.score = score;
+window.look = () => views[0].look();
+window.ready = true;
+</script>

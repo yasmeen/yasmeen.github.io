@@ -20,9 +20,23 @@ export function createMiniYaz(THREE, host, data, opts) {
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: coarse ? 'low-power' : 'high-performance', preserveDrawingBuffer: !!opts.preserve });
   } catch (e) { return null; }
   if (!renderer.getContext()) return null;
+  // every lighting and material value in one place, so the look can be tuned against the reference
+  // (mini-yaz/tools/tune.html) and changed live with setLook()
+  const LOOK = Object.assign({
+    // tuned against reference/turn-front.png and turn-side.png (average color difference 11.2 -> 5.5)
+    exposure: 0.84, env: 1.0, soft: 2.7, fill: 4.0, top: 3.7, rim: 1.6, room: 0.76,
+    key: 1.1, keyX: 7, keyY: 3.75, keyZ: 3.75, hemi: 0.35,
+    blue: [63, 117, 186], cream: [241, 229, 221], pink: [248, 192, 186],
+    rough: 0.5, roughFace: 0.82, sheen: 0.8, sheenFace: 1.0, sheenTint: 0.3,
+    aoPow: 1.15, aoPowFace: 0.5, aoDirect: 0.55, sss: 0, sssFace: 0.06, felt: 1.0, bump: 0.0045, bumpFace: 0.0026,
+    edge: 0.25, edgeFace: 0.4,
+    // the face, measured from the reference
+    blushR: 0.11, blushSoft: 0.016, blushUp: 0.02, blushK: 1.0, eyeSeat: 0.14,
+    mouthW: 0.74, mouthR: 0.024, eyeGloss: 0.9, eyeW: 1.12, glint: 0.62
+  }, opts.look || {});
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NeutralToneMapping;
-  renderer.toneMappingExposure = 1.0;
+  renderer.toneMappingExposure = LOOK.exposure;
   renderer.setClearColor(0x000000, 0);
   const canvas = renderer.domElement;
   Object.assign(canvas.style, {
@@ -34,30 +48,39 @@ export function createMiniYaz(THREE, host, data, opts) {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(18, 1, 0.1, 100);
 
-  // a bright, soft studio: most light comes from the environment, like a photo on a light table
+  // a soft studio lit mostly from the front right, like the reference: a bright panel there and a key light from that side,
+  // a softer panel front left, an overhead, and a rim from behind
   const pmrem = new THREE.PMREMGenerator(renderer);
-  const env = new THREE.Scene();
-  env.add(new THREE.Mesh(new THREE.BoxGeometry(14, 14, 14), new THREE.MeshBasicMaterial({ color: 0xd6d1cb, side: THREE.BackSide })));
-  const panel = (w, h, x, y, z, lum) => {
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(lum, lum, lum), side: THREE.DoubleSide }));
-    p.position.set(x, y, z); p.lookAt(0, 0, 0); env.add(p);
+  let envTex = null;
+  const buildEnv = () => {
+    const env = new THREE.Scene();
+    const room = LOOK.room;
+    env.add(new THREE.Mesh(new THREE.BoxGeometry(14, 14, 14), new THREE.MeshBasicMaterial({ color: new THREE.Color(room, room * 0.982, room * 0.955), side: THREE.BackSide })));
+    const panel = (w, h, x, y, z, lum) => {
+      const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(lum, lum, lum), side: THREE.DoubleSide }));
+      p.position.set(x, y, z); p.lookAt(0, 0, 0); env.add(p);
+    };
+    panel(7, 5, -3, 5, 5.5, LOOK.soft);
+    panel(5, 4, 4.5, 2, 4, LOOK.fill);
+    panel(8, 3, 0, 6.5, 0, LOOK.top);
+    panel(4, 5, 2, 2, -6, LOOK.rim);
+    if (envTex) envTex.dispose();
+    envTex = pmrem.fromScene(env, 0.04).texture;
+    scene.environment = envTex;
+    env.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
   };
-  panel(7, 5, -3, 5, 5.5, 3.2);    // big key softbox, front left and above
-  panel(5, 4, 4.5, 2, 4, 1.8);     // fill, front right
-  panel(8, 3, 0, 6.5, 0, 2.2);     // overhead
-  panel(4, 5, 2, 2, -6, 1.6);      // soft rim from behind
-  scene.environment = pmrem.fromScene(env, 0.04).texture;
-  scene.environmentIntensity = 1.0;
-  const key = new THREE.DirectionalLight(0xfff8f0, 0.9);
-  key.position.set(-3, 6, 6);
+  buildEnv();
+  scene.environmentIntensity = LOOK.env;
+  const key = new THREE.DirectionalLight(0xfff8f0, LOOK.key);
+  key.position.set(LOOK.keyX, LOOK.keyY, LOOK.keyZ);
   scene.add(key);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xe9dccf, 0.35));
+  const hemi = new THREE.HemisphereLight(0xffffff, 0xe9dccf, LOOK.hemi);
+  scene.add(hemi);
 
   // ---------- matte clay, with the shading baked in Blender (vertex AO) ----------
   const CLAY = `
 varying vec3 vObj;
 varying float vAO;
-varying float vBlush;
 uniform float uGrain;
 uniform float uBump;
 float bh(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
@@ -70,35 +93,60 @@ float clayH(vec3 p) { p *= uGrain; return vn(p) * 0.45 + vn(p * 2.3 + 3.1) * 0.2
 float feltTone(vec3 p) { p *= uGrain; return (vn(p * 2.9 + 5.3) - 0.5) * 0.07 + (vn(p * 8.7 + 2.1) - 0.5) * 0.05; }
 vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
   vec3 dpx = dFdx(sp); vec3 dpy = dFdy(sp);
-  vec2 dh = vec2(dFdx(h), dFdy(h)) * uBump;
+  // fade the grain out as it nears pixel size (small on screen), so it never shimmers
+  float lod = clamp(1.6 - length(fwidth(vObj)) * uGrain * 4.0, 0.0, 1.0);
+  vec2 dh = vec2(dFdx(h), dFdy(h)) * uBump * lod;
   vec3 r1 = cross(dpy, sn); vec3 r2 = cross(sn, dpx);
   float det = dot(dpx, r1) * fd;
   vec3 g = sign(det) * (dh.x * r1 + dh.y * r2);
   return normalize(abs(det) * sn - g);
 }`;
+  // shared uniforms, so a look change never recompiles a shader
+  const uni = (face) => ({
+    uAoPow: { value: face && LOOK.aoPowFace != null ? LOOK.aoPowFace : LOOK.aoPow }, uAoDirect: { value: LOOK.aoDirect }, uSss: { value: face ? LOOK.sssFace : LOOK.sss },
+    uFelt: { value: LOOK.felt }, uEdge: { value: face ? LOOK.edgeFace : LOOK.edge }
+  });
+  const U = { clay: uni(false), face: uni(true), props: uni(false) };
+  const faceUni = {
+    uBlushP: { value: new THREE.Vector3(0.56, 0.4, 0.6) }, uBlushR: { value: new THREE.Vector2(LOOK.blushR, LOOK.blushSoft) },
+    uEyeA: { value: new THREE.Vector3(0, -9, 0) }, uEyeB: { value: new THREE.Vector3(0, -9, 0) }, uEyeS: { value: new THREE.Vector3(1, 1, 1) }, uEyeK: { value: LOOK.eyeSeat }
+  };
   const clay = (hex, o) => {
     o = o || {};
     const m = new THREE.MeshPhysicalMaterial({
-      color: hex, roughness: o.rough ?? 0.9, metalness: 0, specularIntensity: 0.18,
-      sheen: o.sheen ?? 0.75, sheenRoughness: 0.85, sheenColor: new THREE.Color(o.sheenColor ?? 0xbfd6fb)   // felt: matte, with a soft bright edge
+      color: hex, roughness: o.rough ?? LOOK.rough, metalness: 0, specularIntensity: 0.18,
+      sheen: o.sheen ?? LOOK.sheen, sheenRoughness: 0.85, sheenColor: new THREE.Color(o.sheenColor ?? 0xbfd6fb)   // felt: matte, with a soft bright edge
     });
-    const face = !!o.face, grain = o.grain ?? 11, bump = o.bump ?? 0.0045;
+    const face = !!o.face, grain = o.grain ?? 11, bump = o.bump ?? LOOK.bump;
+    const shared = o.uniforms || U.props;
     m.onBeforeCompile = (sh) => {
       sh.uniforms.uGrain = { value: grain };
       sh.uniforms.uBump = { value: bump };
-      sh.vertexShader = 'attribute float ao;\n' + (face ? 'attribute float blush;\n' : '') + 'varying vec3 vObj;\nvarying float vAO;\nvarying float vBlush;\n' +
-        sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvObj = position;\nvAO = ao;\nvBlush = ' + (face ? 'blush' : '0.0') + ';');
-      let fs = CLAY + '\n' + (face ? 'uniform vec3 uBlushC;\nuniform float uBlushK;\n' : '') + sh.fragmentShader;
+      Object.assign(sh.uniforms, shared);
+      sh.vertexShader = 'attribute float ao;\nvarying vec3 vObj;\nvarying float vAO;\n' +
+        sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvObj = position;\nvAO = ao;');
+      let fs = CLAY + '\nuniform float uAoPow;\nuniform float uAoDirect;\nuniform float uSss;\nuniform float uFelt;\nuniform float uEdge;\n' +
+        (face ? 'uniform vec3 uBlushC;\nuniform float uBlushK;\nuniform vec3 uBlushP;\nuniform vec2 uBlushR;\nuniform vec3 uEyeA;\nuniform vec3 uEyeB;\nuniform vec3 uEyeS;\nuniform float uEyeK;\n' : '') + sh.fragmentShader;
+      m.userData.shader = sh;
       if (face) {
         sh.uniforms.uBlushC = { value: new THREE.Color(o.blush) };
-        sh.uniforms.uBlushK = { value: 1.0 };
-        m.userData.shader = sh;
-        fs = fs.replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = mix(diffuseColor.rgb, uBlushC, clamp(vBlush * uBlushK, 0.0, 1.0));');
+        sh.uniforms.uBlushK = { value: LOOK.blushK };
+        Object.assign(sh.uniforms, faceUni);
+        // blush: two soft-edged discs drawn on the cheeks (crisper than the per-vertex blush), and a faint shadow where
+        // each eye bead sits on the face
+        fs = fs.replace('#include <color_fragment>', '#include <color_fragment>\n' +
+          '  float bR = uBlushR.x * (0.94 + 0.06 * uBlushK);\n' +
+          '  float bm = max(1.0 - smoothstep(bR - uBlushR.y, bR + uBlushR.y, distance(vObj, uBlushP)), 1.0 - smoothstep(bR - uBlushR.y, bR + uBlushR.y, distance(vObj, uBlushP * vec3(-1.0, 1.0, 1.0))));\n' +
+          '  diffuseColor.rgb = mix(diffuseColor.rgb, uBlushC, bm * clamp(0.82 * uBlushK, 0.0, 1.0));\n' +
+          '  float eA = length((vObj - uEyeA) / uEyeS), eB = length((vObj - uEyeB) / uEyeS);\n' +
+          '  diffuseColor.rgb *= 1.0 - uEyeK * (1.0 - smoothstep(1.0, 1.32, min(eA, eB)));');
       }
-      fs = fs.replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb *= 1.0 + feltTone(vObj);   // a little fibre-to-fibre variation, like felt');
-      fs = fs.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += diffuseColor.rgb * ' + (face ? '0.13' : '0.05') + ' * vAO;   // light passing through soft clay');
+      fs = fs.replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb *= 1.0 + uFelt * feltTone(vObj) * clamp(1.6 - length(fwidth(vObj)) * uGrain * 4.0, 0.0, 1.0);   // a little fibre-to-fibre variation, like felt');
+      fs = fs.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += diffuseColor.rgb * uSss * vAO;   // light passing through soft clay');
       fs = fs.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n  normal = clayPerturb(-vViewPosition, normal, clayH(vObj), faceDirection);');
-      fs = fs.replace('#include <aomap_fragment>', '#include <aomap_fragment>\n  float occ = pow(vAO, 1.15);\n  reflectedLight.indirectDiffuse *= occ;\n  reflectedLight.indirectSpecular *= occ;\n  reflectedLight.directDiffuse *= mix(1.0, occ, 0.65);');
+      fs = fs.replace('#include <aomap_fragment>', '#include <aomap_fragment>\n  float occ = pow(vAO, uAoPow);\n  reflectedLight.indirectDiffuse *= occ;\n  reflectedLight.indirectSpecular *= occ;\n  reflectedLight.directDiffuse *= mix(1.0, occ, uAoDirect);\n' +
+        '  float rimK = 1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);\n  float dim = 1.0 - uEdge * rimK * rimK;   // surfaces turning away from you fall off a little, like the photo\n' +
+        '  reflectedLight.directDiffuse *= dim;\n  reflectedLight.indirectDiffuse *= dim;');
       sh.fragmentShader = fs;
     };
     m.customProgramCacheKey = () => (face ? 'my-face' : 'my-clay') + grain + '_' + bump;
@@ -162,7 +210,10 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
   const squash = new THREE.Group();        // breathing and squash, volume kept
   root.add(squash);
   scene.add(root);
-  const blue = clay(rgb(C.blue).multiplyScalar(0.9));
+  const blueColor = () => (LOOK.blue ? rgb(LOOK.blue) : rgb(C.blue).multiplyScalar(0.9));
+  const sheenOf = (c, k) => new THREE.Color(1, 1, 1).lerp(c, 1 - k);   // sheenTint 0: white edge, 1: the surface's own color
+  const blue = clay(blueColor(), { uniforms: U.clay });
+  blue.sheenColor.copy(sheenOf(blueColor(), LOOK.sheenTint));
   squash.add(new THREE.Mesh(geo(data.body, Array.from(dec(data.body.idx, Uint16Array))), blue));
 
   // arms: the exported mitten, skinned to a shoulder bone and an elbow bone so a wave bends it softly
@@ -198,8 +249,17 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
   squash.add(neck);
   const head = new THREE.Group();
   neck.add(head);
-  const headMat = clay(rgb(C.cream), { face: true, blush: rgb(C.pink), rough: 0.82, sheen: 0.45, sheenColor: 0xfff3ea, bump: 0.0026 });
-  head.add(new THREE.Mesh(geo(data.head, loftIndex(data.head.rings), NECK), headMat));
+  const headMat = clay(LOOK.cream ? rgb(LOOK.cream) : rgb(C.cream), { face: true, blush: LOOK.pink ? rgb(LOOK.pink) : rgb(C.pink), rough: LOOK.roughFace, sheen: LOOK.sheenFace, sheenColor: 0xfff3ea, bump: LOOK.bumpFace, uniforms: U.face });
+  const headGeo = geo(data.head, loftIndex(data.head.rings), NECK);
+  head.add(new THREE.Mesh(headGeo, headMat));
+  {   // the drawn blush sits where Blender painted it: the blush-weighted center of the right cheek
+    const pos = headGeo.attributes.position, bl = headGeo.attributes.blush;
+    const c = new THREE.Vector3(); let wsum = 0;
+    if (bl) for (let i = 0; i < pos.count; i++) { const w = bl.getX(i); if (w > 0.05 && pos.getX(i) > 0) { c.x += pos.getX(i) * w; c.y += pos.getY(i) * w; c.z += pos.getZ(i) * w; wsum += w; } }
+    if (wsum) faceUni.uBlushP.value.copy(c.multiplyScalar(1 / wsum));
+    const e = data.eyes[1].s; faceUni.uEyeS.value.set(e[0] * LOOK.eyeW, e[1], e[0] * LOOK.eyeW);
+    faceUni.uBlushP.value.y += LOOK.blushUp;
+  }
   head.add(new THREE.Mesh(geo(data.hair, hairIndex(data.hair.hair[0], data.hair.hair[1]), NECK), blue));
   const bunPivot = new THREE.Group();
   bunPivot.position.set(BB[0] - NECK[0], BB[1] - NECK[1], BB[2] - NECK[2]);
@@ -211,9 +271,9 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
   const gaze = new THREE.Group();
   gaze.position.set(HC[0] - NECK[0], HC[1] - NECK[1], HC[2] - NECK[2]);
   head.add(gaze);
-  const inkMat = new THREE.MeshPhysicalMaterial({ color: 0x120e0d, roughness: 0.32, clearcoat: 0.6, clearcoatRoughness: 0.12, specularIntensity: 0.4, envMapIntensity: 0.45 });
-  const glintMat = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
-  const lineMat = new THREE.MeshStandardMaterial({ color: 0x1e1412, roughness: 0.55 });
+  const inkMat = new THREE.MeshPhysicalMaterial({ color: 0x0d0c0d, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.06, specularIntensity: 0.5, envMapIntensity: LOOK.eyeGloss });   // glossy beads
+  const glintMat = new THREE.MeshBasicMaterial({ color: 0xf1f3f6, toneMapped: false });
+  const lineMat = new THREE.MeshStandardMaterial({ color: 0x1b1a1d, roughness: 0.4 });
   const makeEye = (e) => {
     const holder = new THREE.Group();
     holder.position.set(e.p[0] - HC[0], e.p[1] - HC[1], e.p[2] - HC[2]);
@@ -221,16 +281,15 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
     const lid = new THREE.Group();
     holder.add(lid);
     const ball = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), inkMat);
-    ball.scale.set(e.s[0], e.s[1], e.s[2]);
+    ball.scale.set(e.s[0] * LOOK.eyeW, e.s[1], e.s[2]);
     lid.add(ball);
-    const gl = new THREE.Vector3(e.s[0] * 0.38, e.s[1] * 0.45, e.s[2] * 0.95);
+    const gl = new THREE.Vector3(e.s[0] * 0.3, e.s[1] * 0.42, e.s[2] * 0.97);   // one highlight, up and in from the rim
     const g1 = new THREE.Mesh(new THREE.SphereGeometry(e.glintR, 20, 14), glintMat);
     g1.position.copy(gl);
-    const g2 = new THREE.Mesh(new THREE.SphereGeometry(e.glintR * 0.45, 14, 10), glintMat);
-    g2.position.set(-gl.x * 0.95, -gl.y * 1.05, gl.z);
-    lid.add(g1, g2);
+    g1.scale.setScalar(LOOK.glint);
+    lid.add(g1);   // one soft highlight, like the reference; the glossy bead reflects the rest
     // happy eyes: a soft arch the oval closes into
-    const w = e.s[0] * 0.92, arcPts = [];
+    const w = e.s[0] * 0.92 * LOOK.eyeW, arcPts = [];
     for (let i = 0; i <= 14; i++) { const u = i / 14 * 2 - 1; arcPts.push(new THREE.Vector3(u * w, e.s[1] * (0.25 - 0.5 * u * u), e.s[2] * 0.7)); }
     const line = (pts, r) => {
       const g = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), pts.length * 3, r, 10, false), lineMat);
@@ -245,19 +304,20 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
     const sleepArc = line(sleepPts, 0.017);
     // dizzy: a spiral where the eye was
     const spiralPts = [];
-    for (let i = 0; i <= 64; i++) { const a = i / 64 * Math.PI * 5.2, r = 0.012 + (i / 64) * e.s[0] * 0.95; spiralPts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r * 1.15, e.s[2] * 0.72)); }
+    for (let i = 0; i <= 64; i++) { const a = i / 64 * Math.PI * 5.2, r = 0.012 + (i / 64) * e.s[0] * 0.95 * LOOK.eyeW; spiralPts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r * 1.15, e.s[2] * 0.72)); }
     const spiral = line(spiralPts, 0.014);
     gaze.add(holder);
-    return { lid, glints: [g1, g2], arc, sleepArc, spiral };
+    return { holder, lid, glints: [g1], arc, sleepArc, spiral };
   };
   const eyeL = makeEye(data.eyes[0]), eyeR = makeEye(data.eyes[1]);
   const smile = new THREE.Group();
   {
-    const P0 = data.smile.pts, mid = P0[(P0.length - 1) >> 1];
+    const S0 = data.smile.pts, mid = S0[(S0.length - 1) >> 1];
+    const P0 = S0.map((p) => [mid[0] + (p[0] - mid[0]) * LOOK.mouthW, p[1], p[2] + 0.003]);   // shorter and a touch deeper, like the reference
     smile.position.set(mid[0] - NECK[0], mid[1] - NECK[1], mid[2] - NECK[2]);
     const pts = P0.map((p) => new THREE.Vector3(p[0] - mid[0], p[1] - mid[1], p[2] - mid[2]));
-    smile.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, data.smile.r, 10, false), lineMat));
-    [pts[0], pts[pts.length - 1]].forEach((q) => { const c = new THREE.Mesh(new THREE.SphereGeometry(data.smile.r, 12, 8), lineMat); c.position.copy(q); smile.add(c); });
+    smile.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, LOOK.mouthR, 12, false), lineMat));
+    [pts[0], pts[pts.length - 1]].forEach((q) => { const c = new THREE.Mesh(new THREE.SphereGeometry(LOOK.mouthR, 14, 10), lineMat); c.position.copy(q); smile.add(c); });
     head.add(smile);
   }
   // an open, happy "D" mouth for big moments. It is wrapped onto the face (each point found by casting a ray at the
@@ -265,7 +325,8 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
   const headMesh = head.children[0];
   const mouthParts = [];
   {
-    const P0 = data.smile.pts, mid = P0[(P0.length - 1) >> 1], e0 = P0[0], e1 = P0[P0.length - 1];
+    const P0 = data.smile.pts, mid = P0[(P0.length - 1) >> 1], sc = (q) => [mid[0] + (q[0] - mid[0]) * LOOK.mouthW, q[1], q[2]];
+    const e0 = sc(P0[0]), e1 = sc(P0[P0.length - 1]);
     const hc = new THREE.Vector3(HC[0], HC[1], HC[2]);
     const c = new THREE.Vector3(mid[0], (e0[1] + e1[1]) / 2, mid[2]);
     const n = c.clone().sub(hc).normalize();
@@ -898,11 +959,15 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
       e.spiral.scale.setScalar(Math.max(0.001, sstep(0.2, 0.7, dz)));
       e.spiral.rotation.z = (i ? -1 : 1) * m.t * 0.009;
     });
+    // the shadow where each eye sits on the face follows the eyes as they look around, and fades as they close
+    eyeL.holder.getWorldPosition(gv); head.worldToLocal(gv); faceUni.uEyeA.value.copy(gv);
+    eyeR.holder.getWorldPosition(gv); head.worldToLocal(gv); faceUni.uEyeB.value.copy(gv);
+    faceUni.uEyeK.value = LOOK.eyeSeat * (1 - close) * (1 - dz);
     const joy = Math.max(P.happy, 0.7 * (P.spark || 0));
     smile.scale.set(1 + 0.15 * joy, 1 + 0.9 * joy, 1);
     setMouth(P.mouth);
     smile.visible = P.mouth < 0.45;
-    if (headMat.userData.shader) headMat.userData.shader.uniforms.uBlushK.value = 1 + 0.35 * joy;
+    if (headMat.userData.shader) headMat.userData.shader.uniforms.uBlushK.value = LOOK.blushK * (1 + 0.35 * joy);
     // follow-through: the bun reads the head about 110 ms late
     m.hist.push({ t: m.t, roll: P.hRoll, pitch: P.hPitch, y: P.y, sy: P.sy, yaw: P.yaw + P.hYaw });
     while (m.hist.length > 2 && m.hist[0].t < m.t - 400) m.hist.shift();
@@ -1050,6 +1115,27 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
       else { m.lastInput = m.t; wake(); }
     },
     setDark: (d) => { setDark(d); render(); },
+    // change any LOOK value live (used by the look tuner)
+    setLook: (patch) => {
+      const envKeys = ['soft', 'fill', 'top', 'rim', 'room'];
+      const rebuild = envKeys.some((k) => k in patch && patch[k] !== LOOK[k]);
+      Object.assign(LOOK, patch);
+      if (rebuild) buildEnv();
+      renderer.toneMappingExposure = LOOK.exposure;
+      scene.environmentIntensity = LOOK.env;
+      key.intensity = LOOK.key; key.position.set(LOOK.keyX, LOOK.keyY, LOOK.keyZ); hemi.intensity = LOOK.hemi;
+      blue.color.copy(blueColor()); blue.roughness = LOOK.rough; blue.sheen = LOOK.sheen; blue.sheenColor.copy(sheenOf(blueColor(), LOOK.sheenTint));
+      headMat.color.copy(LOOK.cream ? rgb(LOOK.cream) : rgb(C.cream)); headMat.roughness = LOOK.roughFace; headMat.sheen = LOOK.sheenFace;
+      [[U.clay, false], [U.props, false], [U.face, true]].forEach(([u, f]) => {
+        u.uAoPow.value = f && LOOK.aoPowFace != null ? LOOK.aoPowFace : LOOK.aoPow; u.uAoDirect.value = LOOK.aoDirect; u.uSss.value = f ? LOOK.sssFace : LOOK.sss; u.uFelt.value = LOOK.felt; u.uEdge.value = f ? LOOK.edgeFace : LOOK.edge;
+      });
+      const bs = blue.userData.shader, hs = headMat.userData.shader;
+      if (bs) bs.uniforms.uBump.value = LOOK.bump;
+      if (hs) { hs.uniforms.uBump.value = LOOK.bumpFace; hs.uniforms.uBlushK.value = LOOK.blushK; hs.uniforms.uBlushC.value.copy(LOOK.pink ? rgb(LOOK.pink) : rgb(C.pink)); }
+      faceUni.uBlushR.value.set(LOOK.blushR, LOOK.blushSoft); inkMat.envMapIntensity = LOOK.eyeGloss;
+      render();
+    },
+    look: () => Object.assign({}, LOOK),
     asleep: () => m.asleep,
     // playground controls (the Lab)
     setProp: (name, on) => {

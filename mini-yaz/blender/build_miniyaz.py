@@ -35,15 +35,18 @@ def mk(name, verts, faces, smooth=True):
     return ob
 
 def loft(name, rings, N=128):
-    """rings: list of (z, a, b, cy) top to bottom; a ring with a = b = 0 becomes a pole."""
+    """rings: list of (z, a, b, cy[, n]) top to bottom; a ring with a = b = 0 becomes a pole.
+    n is the superellipse exponent of the ring: 2 is an ellipse, higher is squarer (a rounded box)."""
     verts, faces, idx = [], [], []
-    for (z, a, b, cy) in rings:
+    for ring in rings:
+        z, a, b, cy = ring[:4]; n = ring[4] if len(ring) > 4 else 2.0
         if a < 1e-5 and b < 1e-5:
             idx.append([len(verts)]); verts.append((0, cy, z)); continue
         s = len(verts)
         for j in range(N):
             t = 2 * math.pi * j / N
-            verts.append((a * math.cos(t), cy + b * math.sin(t), z))
+            c, sn = math.cos(t), math.sin(t)
+            verts.append((a * math.copysign(abs(c) ** (2 / n), c), cy + b * math.copysign(abs(sn) ** (2 / n), sn), z))
         idx.append(list(range(s, s + N)))
     for i in range(len(idx) - 1):
         r0, r1 = idx[i], idx[i + 1]
@@ -195,7 +198,7 @@ bun = loft('Bun', bunRings, 64 if WEB else 96)
 U = 170.0
 D0 = -9.0 / U          # body sits a touch behind the head's center line
 def px_rings(rows, cx=0.0, cd=D0):
-    return [((588 - y) / U, a / U, b / U, -(cd)) for (y, a, b) in rows]
+    return [((588 - y) / U, a / U, b / U, -(cd)) + ((r[3],) if len(r) > 3 else ()) for r in rows for (y, a, b) in [r[:3]]]
 def smooth_rows(rows, step=1.5):
     """monotone cubic through the measured rows, so the surface has no kinks between them (no ridges)"""
     ys = np.array([r[0] for r in rows], float)
@@ -212,26 +215,37 @@ def smooth_rows(rows, step=1.5):
             return (2 * t3 - 3 * t2 + 1) * v[i] + (t3 - 2 * t2 + t) * h[i] * m[i] + (-2 * t3 + 3 * t2) * v[i + 1] + (t3 - t2) * h[i] * m[i + 1]
         return f
     fa, fb = mono([r[1] for r in rows]), mono([r[2] for r in rows])
-    out = [(y, max(0.0, fa(y)), max(0.0, fb(y))) for y in np.arange(ys[0], ys[-1], step)]
-    out[0] = (ys[0], 0, 0); out.append((ys[-1], 0, 0))
+    fn = mono([r[3] if len(r) > 3 else 2.0 for r in rows])
+    out = [(y, max(0.0, fa(y)), max(0.0, fb(y)), fn(y)) for y in np.arange(ys[0], ys[-1], step)]
+    out[0] = (ys[0], 0, 0, 2.0); out.append((ys[-1], 0, 0, 2.0))
     return out
-torsoRows = [(386, 0, 0), (388, 40, 26), (392, 58, 38), (398, 69, 45), (410, 76, 52), (425, 80, 58), (440, 83, 62), (460, 85, 66),
-             (480, 85.5, 67), (500, 84, 65), (515, 82, 62), (528, 80, 58), (538, 76, 54), (546, 66, 46), (552, 46, 32), (556, 0, 0)]
-torso = loft('Torso', px_rings(smooth_rows(torsoRows)), 128)
-legRows = [(506, 0, 0), (508, 30, 36), (513, 38, 46), (522, 41, 50), (560, 41, 50), (570, 39, 48), (578, 34, 42), (584, 25, 31), (587, 14, 18), (588.5, 0, 0)]
-legs = []
-for s, cx in ((-1, 139.5), (1, 222.5)):
-    lg = loft('Leg', px_rings(smooth_rows(legRows, 1.0)), 96)
-    lg.location.x = (cx - 181) / U
-    legs.append(lg)
+# one column from the neck to the ground, like the reference: an oval torso that squares off into the legs (superellipse
+# exponent 2 -> 2.4), rounded at the feet. The slit between the legs is cut out of it below, so there's no crease at the hips.
+bodyRows = [(386, 0, 0), (388, 40, 26), (392, 58, 38), (398, 69, 45), (410, 76, 52), (425, 80, 58), (440, 83, 62), (460, 85, 66),
+            (480, 85.5, 67), (500, 84, 65, 2.05), (515, 83, 60, 2.15), (528, 82.5, 55, 2.25), (540, 82.5, 51, 2.35), (552, 82, 50, 2.4),
+            (566, 81, 49.5, 2.4), (576, 78.5, 46, 2.35), (582, 74, 40, 2.3), (586, 64, 28, 2.2), (588.5, 0, 0)]
+body = loft('Body', px_rings(smooth_rows(bodyRows, 1.0)), 160)
+# the slit between the legs: narrow from the top down, flaring at the ground so each foot ends round (like the reference)
+def prism(name, outline_px, depth=2.0):
+    """outline_px: (half-width px, y px) pairs from the top of the cut down; mirrored in x and extruded through the body"""
+    right = [(w / U, (588 - y) / U) for (w, y) in outline_px]
+    ring = right + [(-x, z) for (x, z) in reversed(right)]
+    n = len(ring)
+    verts = [(x, -depth / 2, z) for (x, z) in ring] + [(x, depth / 2, z) for (x, z) in ring]
+    faces = [tuple(range(n - 1, -1, -1)), tuple(range(n, 2 * n))] + [(i, (i + 1) % n, n + (i + 1) % n, n + i) for i in range(n)]
+    me = bpy.data.meshes.new(name); me.from_pydata(verts, [], faces); me.update()
+    ob = bpy.data.objects.new(name, me); bpy.context.collection.objects.link(ob)
+    return ob
+cut = prism('Slit', [(1.5, 545), (3.5, 548), (4, 566), (4.5, 574), (7, 580), (12, 584.5), (19, 587.5), (26, 592), (30, 610)])
 bpy.ops.object.select_all(action='DESELECT')
-for o in [torso] + legs: o.select_set(True)
-bpy.context.view_layer.objects.active = torso
-bpy.ops.object.join()
-body = torso; body.name = 'Body'
+body.select_set(True); bpy.context.view_layer.objects.active = body
 body.data.remesh_voxel_size = 0.014 if WEB else 0.009
+bpy.ops.object.voxel_remesh()          # a clean, closed surface first, so the cut has something solid to work on
+bm_ = body.modifiers.new('slit', 'BOOLEAN'); bm_.operation = 'DIFFERENCE'; bm_.object = cut; bm_.solver = 'EXACT'
+bpy.ops.object.modifier_apply(modifier='slit')
+bpy.data.objects.remove(cut, do_unlink=True)
 bpy.ops.object.voxel_remesh()
-sm = body.modifiers.new('smooth', 'CORRECTIVE_SMOOTH') if False else body.modifiers.new('smooth', 'SMOOTH')
+sm = body.modifiers.new('smooth', 'SMOOTH')
 sm.factor = 0.5; sm.iterations = 16
 bpy.ops.object.modifier_apply(modifier='smooth')
 if WEB:

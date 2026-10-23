@@ -23,13 +23,26 @@ Blender runs headless from Python (`pip install bpy==5.2.3 numpy pillow` in a vi
 ```sh
 cd mini-yaz/blender
 python profiles.py ../reference/                          # measures the reference -> profiles.json
-WEB=1 SAMPLES=16 python build_miniyaz.py -- . norender    # builds and bakes -> miniyaz.json
+WEB=1 SAMPLES=16 python build_miniyaz.py -- "$PWD" norender   # builds and bakes -> miniyaz.json
 mv miniyaz.json ../ && cd ../..
 npm run build:model                                       # packs it -> assets/mini-yaz/model.bin
 ```
 
-Leave out `WEB=1` to build the full-resolution model and render front, side and hero views (`r_*.png`);
+Leave out `WEB=1` and `norender` to build the full-resolution model and render front, side and hero views (`r_*.png`;
+the output folder must be an absolute path, as above);
 `compare.py` puts those next to the reference with its outline traced over them.
+
+## Matching the reference's look
+
+Every lighting and material value lives in `LOOK` at the top of `assets/mini-yaz/engine.js`. They were tuned against
+the reference automatically: `tools/tune.html` renders the front and side views, lines each up with
+`reference/turn-front.png` and `turn-side.png`, and scores the average color difference after a slight blur;
+`tools/tune.mjs` nudges each setting and keeps what lowers the score.
+
+```sh
+npm run serve                                            # in one terminal
+node mini-yaz/tools/tune.mjs out.json [start.json] [passes]   # then copy the result into LOOK
+```
 
 ## Rendering images of Mini Yaz
 

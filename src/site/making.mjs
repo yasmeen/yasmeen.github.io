@@ -31,7 +31,8 @@ export function making() {
   ${fig('fit.webp', 1400, 405, 'The reference image and the Blender model side by side, from the front and the side, with the reference’s outline traced over the model', 'Reference, model, and the model with the reference’s outline traced over it, from the front and the side.')}
 
   <h2 id="felt">Felt, not plastic</h2>
-  <p>In the browser, three.js draws the model with a custom clay material: matte, with a soft bright edge like felt, a little fiber-to-fiber variation in color, and a fine bumpy texture computed on the fly. The lighting is a small virtual photo studio with a big soft key light, a fill, and a rim from behind.</p>
+  <p>In the browser, three.js draws the model with a custom clay material: matte like felt, with a little fiber-to-fiber variation in color and a fine bumpy texture computed on the fly. The texture fades out as Mini Yaz gets smaller on screen, so it never shimmers. The lighting is a small virtual photo studio with a big soft key light, a fill, and a rim from behind.</p>
+  <p>The colors and lighting weren't picked by eye. A script renders the front and side views, lines each one up with the reference, and compares them color by color after a slight blur, so texture doesn't count. Then it nudges about thirty settings one at a time (light positions and strengths, the blue, the cream, how deep the shadows go) and keeps whatever gets closer. That cut the average color difference roughly in half, and it's why the blush, the shadow under the fringe and the darker sides of the body now match the reference.</p>
 
   <h2 id="motion">One clock, and springs everywhere</h2>
   <p>Everything Mini Yaz does comes from one clock, layered:</p>
@@ -70,7 +71,7 @@ export function making() {
   <h2 id="ship">Making it light</h2>
   <ul>
     <li>Every page first shows a still image of Mini Yaz, so nothing waits on the 3D. The live version loads once the page has settled, then fades in over it.</li>
-    <li>The model is packed into a 129 KB binary file, down from 395 KB, with no detail lost, and three.js is trimmed to the parts it uses.</li>
+    <li>The model is packed into a 128 KB binary file, down from 395 KB, with no detail lost, and three.js is trimmed to the parts it uses.</li>
     <li>It stops drawing when it's off screen or the tab is hidden, drops to 30 frames a second while asleep, and draws fewer pixels on phones or on any device that can't keep up.</li>
     <li>If your system asks for reduced motion, it holds still. The "Pause motion" button does the same for everyone else.</li>
   </ul>
