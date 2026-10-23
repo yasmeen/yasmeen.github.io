@@ -46,7 +46,7 @@ for (const [key, part] of Object.entries(data)) {
   for (const [k, v] of Object.entries(part)) {
     if (k === 'pos') add(`${key}.pos`, 'pos', deltaPlanes(b64(v, Uint16Array), 3), part.n * 3);
     else if (k === 'idx') { const u = b64(v, Uint16Array); add(`${key}.idx`, 'idx', deltaPlanes(u, 1), u.length); }
-    else if (k === 'ao' || k === 'aoR' || k === 'blush') { const u = b64(v, Uint8Array); add(`${key}.${k}`, 'u8', Buffer.from(u), u.length); }
+    else if (['ao', 'aoR', 'blush', 'skin', 'wts'].includes(k)) { const u = b64(v, Uint8Array); add(`${key}.${k}`, 'u8', Buffer.from(u), u.length); }
     else keep[k] = v;
   }
   meta[key] = keep;

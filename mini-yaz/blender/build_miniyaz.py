@@ -116,9 +116,10 @@ def front_point(X, Z):
 # shader; these are its numbers, in Blender space.
 SPLIT_TOP, SPLIT_LOW, SPLIT_STEP = -0.02, 0.12, TOP - 0.595 * HH
 
-# ---------------- body: a short round torso on two stubby legs ----------------
-# Each part is a distance field: a column with a smooth outline and a rounded-oval section. The legs join the torso
-# with a smooth union, so they grow out of it with a soft fillet instead of a crease, and the result is meshed.
+# ---------------- body: a soft round torso, with tapered legs and arms grown out of it, all one piece ----------------
+# Every part is a distance field. The legs and arms are round cones, wide where they join and smaller at the end, and
+# each joins the torso with a smooth union, so it grows out of it with a soft fillet. The result is meshed with
+# marching cubes. The arms stay in this one surface; the browser bends them with a small skeleton (see export_web.py).
 from skimage.measure import marching_cubes
 def mono(xs, vs):
     """monotone cubic through (xs, vs), xs increasing: no overshoot and no kinks between the points (no ridges)"""
@@ -154,31 +155,59 @@ def profile_sdf(rows, r_max=1.4, res=0.004):
         val = T[i, j] * (1 - u) * (1 - v) + T[i + 1, j] * u * (1 - v) + T[i, j + 1] * (1 - u) * v + T[i + 1, j + 1] * u * v
         return val + np.maximum(rho - gr[-1], 0)
     return look
-def section(x, y, depth, n):
-    """distance from the axis in a rounded-oval section: depth is the half-depth over the half-width, n its squareness"""
-    return (np.abs(x) ** n + np.abs(y / depth) ** n) ** (1 / n)
-ramp = lambda z, a, b: np.clip((z - a) / (b - a), 0, 1)
-# the torso: widest at the belly, tapering a little to the hips, with a broad flat bottom that the legs hang from (the
-# crotch); lower down its section squares off a little and gets shallower, to sit on the two legs
-torsoRows = [(1.74, 0.0), (1.72, 0.33), (1.68, 0.5), (1.6, 0.6), (1.5, 0.645), (1.35, 0.675), (1.2, 0.7), (1.0, 0.725),
-             (0.85, 0.735), (0.7, 0.72), (0.62, 0.7), (0.57, 0.684), (0.535, 0.655), (0.515, 0.56), (0.505, 0.35), (0.5, 0.0)]
-# the legs: two short round stumps, together as wide as the torso, with rounded feet and a narrow gap between them
-LEG_X = 0.35
-legRows = [(0.85, 0.0), (0.84, 0.18), (0.81, 0.27), (0.75, 0.31), (0.62, 0.325), (0.45, 0.325), (0.3, 0.318), (0.2, 0.308),
-           (0.13, 0.296), (0.085, 0.279), (0.05, 0.252), (0.025, 0.21), (0.009, 0.15), (0.0, 0.0)]
-torsoD, legD = profile_sdf(torsoRows), profile_sdf(legRows)
+def round_cone(P, a, b, r1, r2):
+    """distance to a cone with round ends: radius r1 around a, r2 around b (P: n x 3)"""
+    a, b = np.asarray(a, float), np.asarray(b, float)
+    ba = b - a; l2 = ba @ ba; rr = r1 - r2; a2 = l2 - rr * rr; il2 = 1.0 / l2
+    pa = P - a; y = pa @ ba; z = y - l2
+    w = pa * l2 - np.outer(y, ba); x2 = (w * w).sum(1); y2 = y * y * l2; z2 = z * z * l2
+    k = np.sign(rr) * rr * rr * x2
+    out = (np.sqrt(np.maximum(x2 * a2 * il2, 0)) + y * rr) * il2 - r1
+    end_b = np.sign(z) * a2 * z2 > k
+    end_a = ~end_b & (np.sign(y) * a2 * y2 < k)
+    out = np.where(end_b, np.sqrt(x2 + z2) * il2 - r2, out)
+    return np.where(end_a, np.sqrt(x2 + y2) * il2 - r1, out)
+def smin(a, b, k):
+    h = np.clip(0.5 + 0.5 * (b - a) / k, 0, 1); return b * (1 - h) + a * h - k * h * (1 - h)
+# the torso: a soft egg, narrower under the head and widest at the belly, its bottom tucked into the legs
+torsoRows = [(1.75, 0.0), (1.7, 0.36), (1.6, 0.47), (1.45, 0.53), (1.25, 0.585), (1.05, 0.635), (0.85, 0.665), (0.7, 0.655),
+             (0.6, 0.61), (0.52, 0.48), (0.47, 0.28), (0.45, 0.0)]
+torsoD = profile_sdf(torsoRows)
+# legs: wide at the hip, tapering to small round feet that just flatten where they stand
+LEG_HIP, LEG_FOOT = (0.29, 0.0, 0.72, 0.35), (0.3, 0.0, 0.2, 0.21)          # (x, y, z, radius)
+# arms: wide at the shoulder, tapering to a rounded hand, hanging out at ARM_TILT degrees. They meet the torso only at
+# the shoulder (mostly under the head), with a gap below the armpit, so raising an arm doesn't drag the torso's side.
+ARM_TILT, ARM_LEN, ARM_R = 38.0, 0.8, (0.215, 0.125)
+SHOULDER = (0.6, 0.0, 1.42)
+def arm_axis(s):
+    t = math.radians(ARM_TILT); return np.array([s * math.sin(t), 0.0, -math.cos(t)])
+def arm_end(s): return np.array([SHOULDER[0] * s, SHOULDER[1], SHOULDER[2]]) + arm_axis(s) * (ARM_LEN - ARM_R[1])
+def d_trunk(P):
+    """torso and legs"""
+    x, y, z = P[:, 0], P[:, 1], P[:, 2]
+    dT = torsoD(np.sqrt(x * x + (y / 0.85) ** 2), z)
+    legs = [round_cone(P, (LEG_HIP[0] * s, 0, LEG_HIP[2]), (LEG_FOOT[0] * s, 0, LEG_FOOT[2]), LEG_HIP[3], LEG_FOOT[3]) for s in (-1, 1)]
+    dL = smin(legs[0], legs[1], 0.05)              # the crotch, rounded
+    dL = -smin(-dL, z, 0.03)                       # flat where the feet meet the ground, with a soft edge
+    return smin(dT, dL, 0.16)
+def d_arm(P, s):
+    return round_cone(P, (SHOULDER[0] * s, SHOULDER[1], SHOULDER[2]), arm_end(s), ARM_R[0], ARM_R[1])
+ARM_K = 0.06
+def d_body(P):
+    d = d_trunk(P)
+    for s in (-1, 1): d = smin(d, d_arm(P, s), ARM_K)
+    return d
 VOX = 0.011 if WEB else 0.0085
-gx = np.arange(-0.86, 0.86 + VOX, VOX, dtype=np.float32); gy = np.arange(-0.7, 0.7 + VOX, VOX, dtype=np.float32)
-gz = np.arange(-0.04, 1.8, VOX, dtype=np.float32)
-X, Y, Zg = np.meshgrid(gx, gy, gz, indexing='ij')
-k = ramp(Zg, 0.45, 1.3); k = k * k * (3 - 2 * k)
-dT = torsoD(section(X, Y, 0.72 + 0.08 * k, 2.6 - 0.4 * k), Zg)
-dL = np.minimum(legD(section(X - LEG_X, Y, 1.45, 2.0), Zg), legD(section(X + LEG_X, Y, 1.45, 2.0), Zg))
-K = 0.12                                       # how far the fillet reaches
-h = np.clip(0.5 + 0.5 * (dL - dT) / K, 0, 1)
-field = dL * (1 - h) + dT * h - K * h * (1 - h)
-del X, Y, Zg, dT, dL, h, k
+gx = np.arange(-1.25, 1.25 + VOX, VOX); gy = np.arange(-0.75, 0.75 + VOX, VOX); gz = np.arange(-0.04, 1.86, VOX)
+field = np.empty((len(gx), len(gy), len(gz)), np.float32)
+GX, GY = np.meshgrid(gx, gy, indexing='ij')
+for k0 in range(0, len(gz), 16):                   # in slabs, to keep memory small
+    zz = gz[k0:k0 + 16]
+    P = np.stack([np.repeat(GX[..., None], len(zz), 2).ravel(), np.repeat(GY[..., None], len(zz), 2).ravel(),
+                  np.broadcast_to(zz, GX.shape + (len(zz),)).ravel()], 1)
+    field[:, :, k0:k0 + 16] = d_body(P).reshape(GX.shape + (len(zz),))
 bv, bf, _, _ = marching_cubes(field, 0.0, spacing=(VOX, VOX, VOX))
+del field
 bv += np.array([gx[0], gy[0], gz[0]])
 body = mk('Body', bv, [tuple(f) for f in bf])
 bpy.ops.object.select_all(action='DESELECT')
@@ -186,26 +215,9 @@ body.select_set(True); bpy.context.view_layer.objects.active = body
 sm = body.modifiers.new('smooth', 'SMOOTH'); sm.factor = 0.5; sm.iterations = 4     # just the voxel steps
 bpy.ops.object.modifier_apply(modifier='smooth')
 if WEB:
-    dm = body.modifiers.new('dec', 'DECIMATE'); dm.ratio = min(1.0, 5200 / len(body.data.vertices))
+    dm = body.modifiers.new('dec', 'DECIMATE'); dm.ratio = min(1.0, 7000 / len(body.data.vertices))
     bpy.ops.object.modifier_apply(modifier='dec')
 bpy.ops.object.shade_smooth()
-
-# ---------------- arms: soft sausages with a rounded mitten, pivot at the shoulder, hanging along -Z ----------------
-armProf = [(0.0, 0.0), (0.02, 0.11), (0.06, 0.142), (0.14, 0.154), (0.32, 0.156), (0.5, 0.16), (0.62, 0.174), (0.71, 0.18),
-           (0.78, 0.172), (0.83, 0.142), (0.865, 0.085), (0.875, 0.0)]
-def resample(prof, n=34 if WEB else 48):
-    ss = np.linspace(prof[0][0], prof[-1][0], n)
-    rs = np.interp(ss, [p[0] for p in prof], [p[1] for p in prof])
-    rs = np.convolve(np.pad(rs, 2, mode='edge'), np.ones(5) / 5, mode='valid')
-    rs[0] = 0; rs[-1] = 0
-    return [(-s, r, r * 1.04, 0.0) for s, r in zip(ss, rs)]
-SHOULDER = (0.65, 0.0, 1.42)
-arms = []
-for s in (-1, 1):
-    arm = loft('Arm', resample(armProf), 40 if WEB else 64)
-    arm.location = (SHOULDER[0] * s, SHOULDER[1], SHOULDER[2])
-    arm.rotation_euler = (0, -math.radians(23) * s, 0)
-    arms.append(arm)
 
 # ---------------- the bow: two puffy loops and a knot, on top of the head on the white side ----------------
 BOW_L = 0.4
@@ -309,7 +321,7 @@ eyeM, _, _ = principled('Eye', srgb(18, 16, 18), rough=0.15, coat=1.0, spec=0.6)
 glintM, _, gb = principled('Glint', (1, 1, 1, 1), rough=0.3)
 if 'Emission Color' in gb.inputs: gb.inputs['Emission Color'].default_value = (1, 1, 1, 1); gb.inputs['Emission Strength'].default_value = 4.0
 lineM, _, _ = principled('Line', srgb(28, 26, 30), rough=0.5)
-for o, mt in [(head, headM), (body, bodyM), (arms[0], whiteM), (arms[1], blueM), (bow, blueM), (smile, lineM)] + [(e, eyeM) for e, g in eyes] + [(g, glintM) for e, g in eyes]:
+for o, mt in [(head, headM), (body, bodyM), (bow, blueM), (smile, lineM)] + [(e, eyeM) for e, g in eyes] + [(g, glintM) for e, g in eyes]:
     o.data.materials.clear(); o.data.materials.append(mt)
 
 # ---------------- light, world, render ----------------

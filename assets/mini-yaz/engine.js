@@ -26,7 +26,9 @@ export function createMiniYaz(THREE, host, data, opts) {
     key: 2.6, keyX: -4, keyY: 6, keyZ: 6, hemi: 0.1,
     // glossy vinyl, Finder blue and white; the blue lifts toward a light cyan where it faces the top-left light
     blue: [38, 146, 238], white: [232, 237, 245], bow: null, cyan: [125, 218, 255], lift: 0.7,
-    rough: 0.44, spec: 0.5, coat: 0.3, coatRough: 0.42,
+    rough: 0.42, spec: 0.6, coat: 1.0, coatRough: 0.14,
+    // a thin pearly film over the vinyl: a faint shift of color as the surface turns away
+    irid: 0.7, iridIOR: 1.35, iridMin: 150, iridMax: 450,
     aoPow: 1.8, aoDirect: 0.6, sss: 0.04, edge: 0.4,
     // the face: bead eyes with lashes, a thin smile
     eyeSeat: 0.04, mouthW: 1.0, mouthR: 0.016, eyeGloss: 1.0, eyeW: 1.0, glint: 0.55, lash: 1.0
@@ -89,10 +91,11 @@ export function createMiniYaz(THREE, host, data, opts) {
     o = o || {};
     const m = new THREE.MeshPhysicalMaterial({
       color: 0xffffff, roughness: o.rough ?? LOOK.rough, metalness: 0, specularIntensity: LOOK.spec,
-      clearcoat: o.coat ?? LOOK.coat, clearcoatRoughness: LOOK.coatRough
+      clearcoat: o.coat ?? LOOK.coat, clearcoatRoughness: LOOK.coatRough,
+      iridescence: o.irid ?? LOOK.irid, iridescenceIOR: LOOK.iridIOR, iridescenceThicknessRange: [LOOK.iridMin, LOOK.iridMax]
     });
     const own = { uColA: { value: a.clone() }, uColB: { value: (b || a).clone() }, uLiftA: { value: liftOf(a) }, uLiftB: { value: liftOf(b || a) }, uSplit: { value: (o.split || [0, 0, -99, 0.01]).slice() }, uProfile: { value: o.profile ? 1 : 0 } };
-    m.userData.own = own; m.userData.fixed = o.rough != null;
+    m.userData.own = own; m.userData.fixed = o.rough != null; m.userData.plain = o.irid != null;
     const face = !!o.face;
     m.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, U, own, face ? faceUni : {});
@@ -171,35 +174,29 @@ export function createMiniYaz(THREE, host, data, opts) {
   // the Finder colors: the head is blue on your left and white on your right, the body the other way round
   const BLUE = () => rgb(LOOK.blue || C.blue), WHITE = () => rgb(LOOK.white || C.white);
   const bodyMat = vinyl(WHITE(), BLUE());
-  squash.add(new THREE.Mesh(geo(data.body, Array.from(dec(data.body.idx, Uint16Array))), bodyMat));
-
-  // arms: the exported mitten, skinned to a shoulder bone and an elbow bone so a wave bends it softly
-  const armMats = [vinyl(WHITE()), vinyl(BLUE())];
+  // body: the torso, legs and arms are one soft surface. The arms bend it through a small skeleton (a shoulder, elbow
+  // and wrist each); Blender exported how much each bone moves each point, blending across the shoulders.
+  const bodyGeo = geo(data.body, Array.from(dec(data.body.idx, Uint16Array)));
+  bodyGeo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(Array.from(dec(data.body.skin, Uint8Array)), 4));
+  bodyGeo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(Array.from(dec(data.body.wts, Uint8Array), (w) => w / 255), 4));
+  const bodyMesh = new THREE.SkinnedMesh(bodyGeo, bodyMat);
+  bodyMesh.frustumCulled = false;
+  squash.add(bodyMesh);
+  const rootBone = new THREE.Bone();
+  bodyMesh.add(rootBone);
+  const ARM_TILT = (R.armTilt * Math.PI) / 180;
   const makeArm = (s) => {
-    const g = geo(data.arm, loftIndex(data.arm.rings), null, s < 0 ? data.arm.ao : data.arm.aoR);
-    const pos = g.attributes.position, idx = [], wts = [];
-    for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i), we = sstep(-0.26, -0.46, y), ww = sstep(-0.49, -0.6, y);   // shoulder, elbow, wrist
-      idx.push(0, 1, 2, 0); wts.push(1 - we, we * (1 - ww), we * ww, 0);
-    }
-    g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(idx, 4));
-    g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(wts, 4));
-    const shoulder = new THREE.Group();
+    const shoulder = new THREE.Bone(), elbow = new THREE.Bone(), wrist = new THREE.Bone();
     shoulder.position.fromArray(s < 0 ? R.shoulderL : R.shoulderR);
-    const b0 = new THREE.Bone(), b1 = new THREE.Bone(), b2 = new THREE.Bone();
-    b1.position.y = -0.36;
-    b2.position.y = -0.18;
-    b0.add(b1); b1.add(b2);
-    const mesh = new THREE.SkinnedMesh(g, armMats[s < 0 ? 0 : 1]);
-    mesh.add(b0);
-    mesh.bind(new THREE.Skeleton([b0, b1, b2]));
-    mesh.frustumCulled = false;
-    shoulder.add(mesh);
-    squash.add(shoulder);
-    return { shoulder, elbow: b1, wrist: b2 };
+    shoulder.rotation.z = s * ARM_TILT;              // bound hanging as modeled; the pose adds to this
+    elbow.position.y = -0.36;
+    wrist.position.y = -0.18;
+    shoulder.add(elbow); elbow.add(wrist); rootBone.add(shoulder);
+    return { shoulder, elbow, wrist };
   };
   const armL = makeArm(-1), armR = makeArm(1);
-  const ARM_TILT = (R.armTilt * Math.PI) / 180;
+  root.updateMatrixWorld(true);
+  bodyMesh.bind(new THREE.Skeleton([rootBone, armL.shoulder, armL.elbow, armL.wrist, armR.shoulder, armR.elbow, armR.wrist]));
 
   // head: pivots at the neck; the bow and the face ride along
   const neck = new THREE.Group();
@@ -362,7 +359,7 @@ export function createMiniYaz(THREE, host, data, opts) {
   setDark(!!opts.dark);
 
   // ---------- props: small things that belong to a page ----------
-  const tint = (hex, o) => vinyl(new THREE.Color(hex), null, o);
+  const tint = (hex, o) => vinyl(new THREE.Color(hex), null, Object.assign({ irid: 0, coat: 0.4 }, o));
   const lit = (geom) => { geom.setAttribute('ao', new THREE.BufferAttribute(new Uint8Array(geom.attributes.position.count).fill(235), 1, true)); return geom; };
   const plain = (geom, hex, o) => new THREE.Mesh(lit(geom), tint(hex, o));
   const labelTex = (w, h, draw) => {
@@ -415,15 +412,15 @@ export function createMiniYaz(THREE, host, data, opts) {
       [-1, 1].forEach((s) => {
         const shoe = new THREE.Group();
         const sole = plain(new THREE.CylinderGeometry(1, 1, 1, 40), 0xfbfaf6, { rough: 0.7 });
-        sole.scale.set(0.31, 0.07, 0.53); sole.position.set(0, 0.035, 0.03);
+        sole.scale.set(0.245, 0.07, 0.29); sole.position.set(0, 0.035, 0.02);
         const upper = plain(new THREE.SphereGeometry(1, 40, 24, 0, Math.PI * 2, 0, Math.PI / 2), 0xd8e85a);
-        upper.scale.set(0.3, 0.27, 0.515); upper.position.set(0, 0.06, 0.03);
+        upper.scale.set(0.235, 0.22, 0.28); upper.position.set(0, 0.06, 0.02);
         const stripe = plain(new THREE.TorusGeometry(1, 0.06, 8, 40, Math.PI * 0.9), 0xffffff);
-        stripe.scale.set(0.307, 0.12, 0.42); stripe.position.set(0, 0.085, 0.01);
+        stripe.scale.set(0.24, 0.1, 0.24); stripe.position.set(0, 0.085, 0.0);
         const lace = plain(new THREE.TorusGeometry(0.055, 0.018, 8, 20), 0xf4a6b6);
-        lace.position.set(0, 0.3, 0.27); lace.rotation.x = -0.9;
+        lace.position.set(0, 0.25, 0.17); lace.rotation.x = -0.9;
         shoe.add(sole, upper, stripe, lace);
-        shoe.position.set(s * 0.35, 0, 0.0);
+        shoe.position.set(s * 0.3, 0, 0.0);
         shoe.rotation.y = s * 0.08;
         g.add(shoe);
       });
@@ -469,7 +466,7 @@ export function createMiniYaz(THREE, host, data, opts) {
       });
       const g = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.3, 32, 1, true, -0.62, 1.24), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85, side: THREE.DoubleSide }));
       g.position.set(0, 0.8, 0);
-      g.scale.set(0.78, 1, 0.65);
+      g.scale.set(0.71, 1, 0.61);
       squash.add(g);
       return g;
     },
@@ -1092,10 +1089,12 @@ export function createMiniYaz(THREE, host, data, opts) {
       key.intensity = LOOK.key; key.position.set(LOOK.keyX, LOOK.keyY, LOOK.keyZ); hemi.intensity = LOOK.hemi;
       bodyMat.userData.own.uColA.value.copy(WHITE()); bodyMat.userData.own.uColB.value.copy(BLUE());
       headMat.userData.own.uColA.value.copy(BLUE()); headMat.userData.own.uColB.value.copy(WHITE());
-      armMats[0].userData.own.uColA.value.copy(WHITE()); armMats[0].userData.own.uColB.value.copy(WHITE());
-      armMats[1].userData.own.uColA.value.copy(BLUE()); armMats[1].userData.own.uColB.value.copy(BLUE());
       const bc = LOOK.bow ? rgb(LOOK.bow) : BLUE(); bowMat.userData.own.uColA.value.copy(bc); bowMat.userData.own.uColB.value.copy(bc);
-      mats.forEach((mt) => { if (!mt.userData.fixed) mt.roughness = LOOK.rough; mt.specularIntensity = LOOK.spec; mt.clearcoat = LOOK.coat; mt.clearcoatRoughness = LOOK.coatRough; });
+      mats.forEach((mt) => {
+        if (!mt.userData.fixed) mt.roughness = LOOK.rough;
+        mt.specularIntensity = LOOK.spec; mt.clearcoatRoughness = LOOK.coatRough;
+        if (!mt.userData.plain) { mt.clearcoat = LOOK.coat; mt.iridescence = LOOK.irid; mt.iridescenceIOR = LOOK.iridIOR; mt.iridescenceThicknessRange = [LOOK.iridMin, LOOK.iridMax]; }
+      });
       U.uAoPow.value = LOOK.aoPow; U.uAoDirect.value = LOOK.aoDirect; U.uSss.value = LOOK.sss; U.uEdge.value = LOOK.edge; U.uLift.value = LOOK.lift;
       mats.forEach((mt) => { const o = mt.userData.own; o.uLiftA.value.copy(liftOf(o.uColA.value)); o.uLiftB.value.copy(liftOf(o.uColB.value)); });
       inkMat.envMapIntensity = LOOK.eyeGloss;

@@ -86,10 +86,10 @@
 
   <h2 id="vinyl">A vinyl toy</h2>
   <p>The version you see now takes after Apple's Little Finder Guy, the blind-box figure with the Finder face: a big soft head split blue and white, with the line between them stepping over at the nose, tiny bead eyes and a thin smile. Mini Yaz is the girl version, with a bow on the white side and lashes.</p>
-  <p>The proportions were measured from a front view of the figure: how wide the head is at every height, where the eyes and the smile sit, and how far the line steps over at the nose. A script in Blender builds each part from those numbers. The head is lofted ring by ring into a soft gumdrop, the legs grow out of the torso with a soft fillet (the two are blended as distance fields), and the bow is two puffy loops and a knot. Blender also bakes the soft shadows where parts meet (under the head, under the bow, between the arms and the body) into the model, so the browser doesn't have to compute them.</p>
+  <p>The proportions were measured from a front view of the figure: how wide the head is at every height, where the eyes and the smile sit, and how far the line steps over at the nose. A script in Blender builds each part from those numbers. The head is lofted ring by ring into a soft gumdrop, and the bow is two puffy loops and a knot. The torso, arms and legs are one piece: each is a distance field, the limbs wide where they join and smaller at the end, blended into the torso with a soft fillet, and the whole thing is meshed at once. The arms bend that one surface through a small skeleton (a shoulder, an elbow and a wrist each), so they can still wave. Blender also bakes the soft shadows where parts meet (under the head, under the bow, around the arms and legs) into the model, so the browser doesn't have to compute them.</p>
 
   <h2 id="felt">Plastic, not felt</h2>
-  <p>In the browser, three.js draws the model as glossy vinyl: a soft sheen, a clear coat, and the baked shadows. The blue and white aren't painted onto the model. The shader splits each part at a line, so the edge stays crisp at any size: down the middle of the body, and on the head along the Finder profile. Where the blue faces the big light at the top left it lifts toward a light cyan, like the figure. The lighting is a small virtual photo studio with a big soft panel and a key light at the top left, a dim fill, and a rim from behind.</p>
+  <p>In the browser, three.js draws the model as glossy vinyl: a clear coat, a thin pearly film that shifts the color a little as the surface turns away, and the baked shadows. The blue and white aren't painted onto the model. The shader splits each part at a line, so the edge stays crisp at any size: down the middle of the body, and on the head along the Finder profile. Where the blue faces the big light at the top left it lifts toward a light cyan, like the figure. The lighting is a small virtual photo studio with a big soft panel and a key light at the top left, a dim fill, and a rim from behind.</p>
 
   <h2 id="motion">One clock, and springs everywhere</h2>
   <p>Everything Mini Yaz does comes from one clock, layered:</p>
@@ -137,7 +137,7 @@
   <h2 id="ship">Making it light</h2>
   <ul>
     <li>Every page first shows a still image of Mini Yaz, so nothing waits on the 3D. The live version loads once the page has settled, then fades in over it.</li>
-    <li>The model is packed into a 101 KB binary file, down from 291 KB, with no detail lost, and three.js is trimmed to the parts it uses.</li>
+    <li>The model is packed into a 124 KB binary file, down from 397 KB, with no detail lost, and three.js is trimmed to the parts it uses.</li>
     <li>It stops drawing when it's off screen or the tab is hidden, drops to 30 frames a second while asleep, and draws fewer pixels on phones or on any device that can't keep up.</li>
     <li>If your system asks for reduced motion, it holds still. The "Pause motion" button does the same for everyone else.</li>
   </ul>

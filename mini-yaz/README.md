@@ -12,7 +12,10 @@ blender/build_miniyaz.py          builds the model in Blender             ->  bl
 ```
 
 The proportions in `build_miniyaz.py` (the head's width at every height, where the eyes and smile sit, where the
-blue-and-white line steps over at the nose) were measured from a front view of the Finder figure.
+blue-and-white line steps over at the nose) were measured from a front view of the Finder figure. The torso, arms and
+legs are one surface: distance fields (the limbs are round cones, wide at the joint and smaller at the end) blended
+with a smooth union and meshed with marching cubes. The body carries skin weights, so the browser bends the arms with a
+small skeleton (a shoulder, elbow and wrist each).
 
 In the browser, `assets/mini-yaz/mascot.js` mounts every `.mini-yaz` on a page and `assets/mini-yaz/engine.js` draws and
 animates it with three.js (r169, trimmed to what's used in `assets/mini-yaz/three.min.js`). `miniyaz.json` is also the
@@ -37,7 +40,7 @@ the output folder must be an absolute path, as above).
 ## The look
 
 Every lighting and material value lives in `LOOK` at the top of `assets/mini-yaz/engine.js`, and `setLook()` changes
-them live. The material is glossy vinyl with the shading baked in Blender. The blue and white aren't painted on the
+them live. The material is glossy vinyl with a clear coat and a thin iridescent film, with the shading baked in Blender. The blue and white aren't painted on the
 model: the shader splits each part at a line (on the head, the Finder profile, stepping over at the nose), so the edge
 stays crisp at any size. Where the blue faces the big top-left light it lifts toward a light cyan, like the figure.
 `LOOK.bow` sets the bow's color (it's the Finder blue unless set).
