@@ -67,25 +67,46 @@ def ring_point(rings, u, t):
 
 # ---------------- head ----------------
 H = P['head']
-# the drawing's outline includes the hair, so the head underneath sits one hair-thickness inside it
+# The reference's outline includes the hair. The face sits on that outline, and under the hair the head steps in by the
+# hair's thickness (once the hair's edge is known, below), so the hair lands back on the outline. Insetting whole rings
+# instead puts that step on the face wherever the face reaches the side of the head.
 HAIR_T = 0.04
-headRings = [(h['z'], max(0.0, h['a'] - HAIR_T) if h['a'] > 0 else 0.0, max(0.0, h['b'] - HAIR_T) if h['b'] > 0 else 0.0, -h['d']) for h in H]
+def smooth(a, b, x):
+    t = min(1.0, max(0.0, (x - a) / (b - a))); return t * t * (3 - 2 * t)
+def head_ring(h, inset=0.0):
+    z, a, b, d = h['z'], h['a'], h['b'], h['d']
+    if a <= 0 and b <= 0: return (z, 0.0, 0.0, -d)
+    return (z, max(0.0, a - inset), max(0.0, b - inset), -d)
+headRings = [head_ring(h) for h in H]
+innerRings = [head_ring(h, HAIR_T) for h in H]     # the head under the hair
 if WEB:
     headRings = headRings[:-1:2] + [headRings[-1]]
+    innerRings = innerRings[:-1:2] + [innerRings[-1]]
 NH = 136 if WEB else 192
 head = loft('Head', headRings, NH)
 
-hx, hz = np.array(P['hairline']['x']), np.array(P['hairline']['z'])
 fz, fd = np.array(P['faceEdge']['z']), np.array(P['faceEdge']['d'])
 order = np.argsort(fz); fz, fd = fz[order], fd[order]
+# the fringe: a straight line across the forehead with a soft widow's peak in the middle, curving down at the temples
+FRINGE_Z, PEAK, PEAK_W = 2.13, 0.11, 0.36
+# the temples curve down early enough that this line, not the side view's face edge, shapes the fringe's corners
+TEMPLE_X0, TEMPLE_X1, TEMPLE_Z = 0.45, 0.86, 1.72
 def hairline_z(x):
-    if x < hx[0]: return hz[0] - (hx[0] - x) * 2.5      # past the measured edge the bob drops away
-    if x > hx[-1]: return hz[-1] - (x - hx[-1]) * 2.5
-    return float(np.interp(x, hx, hz))
+    ax = abs(x)
+    s = min(1.0, ax / PEAK_W)
+    z = FRINGE_Z - PEAK * (1 - s) ** 2 * (1 + 2 * s)      # a peak with a softly rounded tip, so the rolled edge doesn't pinch
+    if ax > TEMPLE_X0: z -= (FRINGE_Z - TEMPLE_Z) * min(1.0, (ax - TEMPLE_X0) / (TEMPLE_X1 - TEMPLE_X0)) ** 2
+    if ax > TEMPLE_X1: z -= (ax - TEMPLE_X1) * 2 * (FRINGE_Z - TEMPLE_Z) / (TEMPLE_X1 - TEMPLE_X0)   # then drops away
+    return z
 def face_edge_d(z):
     # above the measured rows the side view only sees the fringe itself, so the front hairline decides there
     if z > fz[-1]: return float(fd[-1])
-    return float(np.interp(z, fz, fd)) - 0.02
+    measured = float(np.interp(z, fz, fd)) - 0.02
+    # Below the eyes the face reaches the outline as seen from the front (a wide chin, like the reference), and it wraps
+    # under the chin to behind the neck, so no hair shows below the chin. Above that the side hair follows the side view,
+    # and the back of the head stays hair.
+    low = -0.02 - 0.12 * smooth(1.62, 1.28, z)
+    return measured + (min(measured, low) - measured) * smooth(1.80, 1.62, z)
 def is_face(p):
     X, Y, Z = p; D = -Y
     return Z < hairline_z(X) and D > face_edge_d(Z)
@@ -93,12 +114,11 @@ def is_face(p):
 # ---------------- hair: a clay layer laid on the head, cut exactly along the fringe, with a rolled edge ----------------
 NM, M = (240, 52) if WEB else (320, 90)
 u_max = len(headRings) - 1.0
-def surf_normal(u, t):
+def surf_normal(u, t, rings=headRings):
     e = 1e-3
-    du = ring_point(headRings, u + e, t) - ring_point(headRings, u - e, t)
-    dt = ring_point(headRings, u, t + e) - ring_point(headRings, u, t - e)
+    du = ring_point(rings, u + e, t) - ring_point(rings, u - e, t)
+    dt = ring_point(rings, u, t + e) - ring_point(rings, u, t - e)
     n = dt.cross(du).normalized()
-    z, a, b, cy = interp_rings(headRings, u)
     outward = Vector((math.cos(t), math.sin(t), 0.0))
     if n.dot(outward) < 0 and abs(math.cos(t)) + abs(math.sin(t)) > 0: n = -n
     return n
@@ -131,6 +151,22 @@ def edge_dist(p):
     q = np.array(p[:]); ab = segB - segA
     t = np.clip(((q - segA) * ab).sum(1) / np.maximum((ab * ab).sum(1), 1e-12), 0, 1)
     return float(np.sqrt((((segA + ab * t[:, None]) - q) ** 2).sum(1)).min())
+# The head steps in under the hair. The face starts dipping a little before the edge, as if the hair pressed into it,
+# so the rolled edge stands out from the face without standing far out of the outline.
+FACE_W = 0.12
+def inset_at(sd):
+    """how far in (0..1 of the hair's thickness) the head sits at signed distance sd from the edge, + under the hair"""
+    return smooth(-FACE_W, 1.4 * LIP, sd)
+def under_hair(p):
+    d = edge_dist(p); return inset_at(-d if is_face(p) else d)
+hv, i = head.data.vertices, 0
+for r, ring in enumerate(headRings):
+    for j in range(1 if ring[1] < 1e-5 and ring[2] < 1e-5 else NH):
+        t = 2 * math.pi * j / NH
+        p = Vector(hv[i].co)
+        hv[i].co = p + (ring_point(innerRings, r, t) - ring_point(headRings, r, t)) * under_hair(p); i += 1
+assert i == len(hv)
+head.data.update()
 # every meridian shares the same rings over the crown (no pucker); below that they fan out to their own edge
 real = [b for b in bounds if b < u_max - 1.0]
 u_cap = 0.85 * min(real)
@@ -173,11 +209,14 @@ for j in range(NM):
     L = L[::-1]
     for k, p in enumerate(zs):
         u = US[k]
-        n = surf_normal(max(u, 0.6), t)
+        n = surf_normal(max(u, 0.6), t, innerRings)
         dist = edge_dist(p) if len(segA) else 9.0
         q = min(dist / LIP, 1.0)
         h = THICK * math.sqrt(max(0.0, 1 - (1 - q) ** 2)) - 0.006 * (1 - q) ** 4
         if bounds[j] >= u_max - 1.0: h = min(h, THICK * min(1.0, (u_max - u) / 6.0))   # the back: the hair tucks under the head
+        # The hair lies on the head as stepped in above, raised along the smooth inner head's normal (offsetting along the
+        # step itself would fold the hair over itself).
+        p = p + (ring_point(innerRings, u, t) - p) * inset_at(dist)
         col.append(len(hverts)); hverts.append(tuple(p + n * h))
     ring_ids.append(col)
 for j in range(NM):
@@ -219,11 +258,12 @@ def smooth_rows(rows, step=1.5):
     out = [(y, max(0.0, fa(y)), max(0.0, fb(y)), fn(y)) for y in np.arange(ys[0], ys[-1], step)]
     out[0] = (ys[0], 0, 0, 2.0); out.append((ys[-1], 0, 0, 2.0))
     return out
-# one column from the neck to the ground, like the reference: an oval torso that squares off into the legs (superellipse
-# exponent 2 -> 2.4), rounded at the feet. The slit between the legs is cut out of it below, so there's no crease at the hips.
-bodyRows = [(386, 0, 0), (388, 40, 26), (392, 58, 38), (398, 69, 45), (410, 76, 52), (425, 80, 58), (440, 83, 62), (460, 85, 66),
-            (480, 85.5, 67), (500, 84, 65, 2.05), (515, 83, 60, 2.15), (528, 82.5, 55, 2.25), (540, 82.5, 51, 2.35), (552, 82, 50, 2.4),
-            (566, 81, 49.5, 2.4), (576, 78.5, 46, 2.35), (582, 74, 40, 2.3), (586, 64, 28, 2.2), (588.5, 0, 0)]
+# one column from the neck to the ground, like the reference, kept soft like a plush toy: a full oval torso that only
+# barely squares off into the legs (superellipse exponent 2 -> 2.2), round shoulders and round feet. The slit between the
+# legs is cut out of it below, so there's no crease at the hips.
+bodyRows = [(386, 0, 0), (387.5, 38, 28), (391, 58, 41), (397, 70, 49), (409, 78, 56), (424, 82, 61), (440, 85, 65), (460, 87, 68),
+            (480, 87.5, 69), (500, 86, 67, 2.05), (515, 84.5, 62, 2.1), (528, 83.5, 57, 2.15), (540, 83, 53, 2.2), (552, 82.5, 51.5, 2.2),
+            (566, 81.5, 50, 2.2), (575, 79, 47, 2.15), (581, 75, 42, 2.1), (585.5, 67, 32, 2.05), (588.5, 0, 0)]
 body = loft('Body', px_rings(smooth_rows(bodyRows, 1.0)), 160)
 # the slit between the legs: narrow from the top down, flaring at the ground so each foot ends round (like the reference)
 def prism(name, outline_px, depth=2.0):
@@ -246,7 +286,7 @@ bpy.ops.object.modifier_apply(modifier='slit')
 bpy.data.objects.remove(cut, do_unlink=True)
 bpy.ops.object.voxel_remesh()
 sm = body.modifiers.new('smooth', 'SMOOTH')
-sm.factor = 0.5; sm.iterations = 16
+sm.factor = 0.5; sm.iterations = 26   # soft, plush transitions everywhere
 bpy.ops.object.modifier_apply(modifier='smooth')
 if WEB:
     dm = body.modifiers.new('dec', 'DECIMATE'); dm.ratio = min(1.0, 5200 / len(body.data.vertices))
@@ -254,7 +294,7 @@ if WEB:
 bpy.ops.object.shade_smooth()
 
 # ---------------- arms: teardrop mittens, pivot at the shoulder, hanging along -Z ----------------
-armProf = [(0.0, 0.0), (0.02, 0.07), (0.06, 0.1), (0.15, 0.115), (0.3, 0.135), (0.42, 0.158), (0.5, 0.17), (0.56, 0.166), (0.61, 0.14), (0.645, 0.09), (0.668, 0.0)]
+armProf = [(0.0, 0.0), (0.02, 0.085), (0.06, 0.112), (0.15, 0.127), (0.3, 0.145), (0.42, 0.166), (0.5, 0.176), (0.56, 0.172), (0.605, 0.152), (0.64, 0.11), (0.662, 0.055), (0.672, 0.0)]   # plump mittens
 
 # resample the profile smoothly
 from mathutils import geometry
