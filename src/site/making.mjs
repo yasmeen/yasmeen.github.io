@@ -71,7 +71,7 @@ export function making() {
   <h2 id="ship">Making it light</h2>
   <ul>
     <li>Every page first shows a still image of Mini Yaz, so nothing waits on the 3D. The live version loads once the page has settled, then fades in over it.</li>
-    <li>The model is packed into a 99 KB binary file, down from 291 KB, with no detail lost, and three.js is trimmed to the parts it uses.</li>
+    <li>The model is packed into a 101 KB binary file, down from 291 KB, with no detail lost, and three.js is trimmed to the parts it uses.</li>
     <li>It stops drawing when it's off screen or the tab is hidden, drops to 30 frames a second while asleep, and draws fewer pixels on phones or on any device that can't keep up.</li>
     <li>If your system asks for reduced motion, it holds still. The "Pause motion" button does the same for everyone else.</li>
   </ul>
