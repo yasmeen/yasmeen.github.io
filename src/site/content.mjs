@@ -3,6 +3,8 @@
 export const site = {
   name: 'Yasmeen Roumie',
   title: 'Design engineer',
+  // the home page's headline rotates through these, starting with the first
+  titles: ['Design engineer', 'Backend engineer', 'AR developer', 'Hackathon winner'],
   tagline: "Always building with what's new.",
   location: 'Miami, FL',
   url: 'https://yasmeenroumie.com',

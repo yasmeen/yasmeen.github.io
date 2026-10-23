@@ -13,7 +13,7 @@ function home() {
     <h1 class="hero-name" id="name">${site.name}</h1>
     <div class="hero-mascot">${mascot({ pose: 'wave', label: 'Mini Yaz, a little vinyl me, waving hello', main: true })}</div>
     ${hint('Tap Mini Yaz to say hi, or drag to spin')}
-    <div class="hero-title"><span>${site.title}.</span> <span>${site.tagline}</span></div>
+    <div class="hero-title"><span><span class="visually-hidden">${site.titles.join(', ')}.</span><span class="roles" aria-hidden="true" data-roles>${site.titles.map((t, i) => `<span class="role${i ? '' : ' is-on'}">${t}.</span>`).join('')}</span></span> <span>${site.tagline}</span></div>
     <p class="hero-body">${site.summary}</p>
     <p class="pill">${pin()} ${site.location}</p>
     <div class="actions">
@@ -54,7 +54,6 @@ ${projects.filter((p) => p.home).map((p) => `      <a class="build lift" href="/
       path: '/', active: 'home',
       title: `${site.name} · ${site.title} in ${site.location}`,
       description: `${site.name} is a design engineer in ${site.location} who builds with whatever's newest: HoloLens apps at NASA, AR lenses at Snapchat, NLP at Tinder and Goldman Sachs, blockchain at Celo, and backend systems at Oscar Health and Hook.`,
-      subnav: [['#places', "Places I've worked"], ['#built', "Things I've built"], ['/making-mini-yaz', 'Making Mini Yaz'], [site.github, 'GitHub'], [site.linkedin, 'LinkedIn']],
       jsonld: person, main
     })
   };
@@ -120,7 +119,7 @@ ${j.attach.map(attachment).join('\n')}
       path: '/work', active: 'work', pageName: 'Work',
       title: `Work · ${site.name}`,
       description: `Places ${site.name} has worked, newest first: Hook, Oscar Health, Goldman Sachs, Celo, Tinder, Snapchat and NASA, with the talks, papers and code from each.`,
-      subnav: jobs.map((j) => ['#' + j.id, j.co]), main
+      main
     })
   };
 }
@@ -159,7 +158,7 @@ ${projects.map((p) => `  <a class="project" id="${p.id}" href="${p.href}" data-y
       path: '/projects', active: 'projects', pageName: 'Projects',
       title: `Projects · ${site.name}`,
       description: `Side projects by ${site.name}, usually built with whatever had just come out: ${projects.map((p) => p.name).join(', ')}.`,
-      subnav: projects.map((p) => ['#' + p.id, p.name]), main
+      main
     })
   };
 }
@@ -239,7 +238,6 @@ ${win('springs', 'Springs, not keyframes', `      <h2 id="springs-h">Springs, no
       path: '/lab', active: 'lab', pageName: 'Lab',
       title: `Lab · ${site.name}`,
       description: 'Small interactive experiments: play with Mini Yaz, mix an Aqua gel button, and feel how springs move.',
-      subnav: [['#playground', 'Mini Yaz playground'], ['#gel', 'Aqua gel maker'], ['#springs', 'Springs, not keyframes'], ['/making-mini-yaz', 'Making Mini Yaz']],
       main, scripts: '<script type="module" src="/assets/js/lab.js"></script>\n'
     })
   };
@@ -289,7 +287,6 @@ ${about.facts.map(([k, v]) => `        <dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).jo
       path: '/about', active: 'about', pageName: 'About',
       title: `About · ${site.name}`,
       description: `${site.name} is a design engineer based in ${site.location} who has always gravitated to whatever's newest, from HoloLens at NASA to AR at Snapchat.`,
-      subnav: [['#bio', 'Bio'], ['#contact', 'Say hi'], ['/making-mini-yaz', 'Making Mini Yaz'], [site.github, 'GitHub'], [site.linkedin, 'LinkedIn']],
       jsonld: person, main
     })
   };
@@ -314,7 +311,6 @@ function notFound() {
       path: '/404', active: '', pageName: 'Lost',
       title: `Lost · ${site.name}`,
       description: 'This page wandered off.',
-      subnav: [['/', 'Home'], ['/work', 'Work'], ['/projects', 'Projects'], ['/about', 'About']],
       noindex: true, main
     })
   };

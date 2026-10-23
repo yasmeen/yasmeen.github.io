@@ -40,10 +40,6 @@
   --tab-bg: linear-gradient(#FFFFFF, #E9E9E9 55%, #D9D9D9);
   --tab-shine: inset 0 1px 0 #FFFFFF;
   --tab-ink: #222222;
-  --sub-bg: linear-gradient(#F7F7F7, #DEDEDE);
-  --sub-top: #8E8E8E;
-  --sub-bottom: #B8B8B8;
-  --sub-ink: #222222;
 
   --gel-a: #5AA6F5;
   --gel-b: #1557B8;
@@ -118,10 +114,6 @@
   --tab-bg: linear-gradient(#4A4D53, #3B3E44 55%, #313338);
   --tab-shine: inset 0 1px 0 rgba(255,255,255,.12);
   --tab-ink: #E6E6E8;
-  --sub-bg: linear-gradient(#36383D, #2A2C30);
-  --sub-top: #17181A;
-  --sub-bottom: #17181A;
-  --sub-ink: #D9DADD;
 
   --gel-a: #A3ACB8;
   --gel-b: #4D5560;
@@ -198,11 +190,8 @@ a:hover { color: var(--link-hover); }
 .tab--home img { width: 44px; height: auto; margin-bottom: -3px; display: block; }
 .tab--home[aria-current="page"] img { width: 48px; }
 .titlebar { display: none; }
-.subnav { overflow-x: auto; border-top: 1px solid var(--sub-top); border-bottom: 1px solid var(--sub-bottom); background: var(--sub-bg); scrollbar-width: none; }
-.subnav::-webkit-scrollbar { display: none; }
-.subnav .wrap { padding: 0 14px; display: flex; gap: 18px; white-space: nowrap; font-size: 12px; line-height: 28px; }
-.subnav a { color: var(--sub-ink); text-decoration: none; }
-.subnav a:hover { text-decoration: underline; }
+/* the tabs sit on a thin bar in the selected tab's gel, like a Mac OS X tab view */
+.masthead::after { content: ""; display: block; height: 6px; border-top: 1px solid var(--gel-line); border-bottom: 1px solid var(--tab-line); background: var(--gel-b); }
 
 /* ---------- buttons ---------- */
 .btn {
@@ -261,6 +250,12 @@ a:hover { color: var(--link-hover); }
 .hero-title { margin-top: clamp(22px, 5vw, 34px); display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 0 clamp(14px, 4vw, 40px); font-family: var(--serif); font-size: clamp(36px, 7.6vw, 60px); line-height: 1.05; letter-spacing: -0.02em; }
 .hero-title span { text-wrap: balance; }
 .hero-title span:first-child { color: var(--hero-sub); }
+/* the rotating headline: every title sits in the same grid cell, so the line keeps the width of the longest one */
+.roles { display: inline-grid; justify-items: center; }
+.role { grid-area: 1 / 1; opacity: 0; transform: translateY(.3em); transition: opacity .45s ease, transform .45s ease; }
+.role.is-on { opacity: 1; transform: none; }
+.role.is-out { opacity: 0; transform: translateY(-.3em); }
+@media (prefers-reduced-motion: reduce) { .role { transition: none; } }
 .hero-body { margin: 18px auto 0; max-width: 48ch; font-size: clamp(15px, 3.8vw, 17px); line-height: 1.6; color: var(--hero-body); }
 .pill { margin: 16px 0 0; display: inline-flex; align-items: center; gap: 7px; padding: 6px 14px 6px 10px; border-radius: 999px; background: var(--pill-bg); border: 1px solid var(--pill-line); font-size: 13px; color: var(--hero-name); }
 .pill svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -475,12 +470,12 @@ input[type="color"] { width: 38px; height: 30px; padding: 0; border: 1px solid v
 @media (max-width: 640px) {
   .tabs { display: none; }
   .masthead { padding-top: 0; }
+  .masthead::after { display: none; }
   .titlebar { display: flex; align-items: center; justify-content: center; gap: 8px; height: 30px; padding: 0 12px; background: var(--win-bar); border-bottom: 1px solid var(--win-bar-line); font-size: 13px; color: var(--win-title); text-decoration: none; }
   .titlebar:hover { color: var(--win-title); }
   .titlebar img { width: 22px; height: auto; margin-top: 4px; align-self: flex-end; }
   .titlebar b { font-weight: 700; }
   .titlebar span { color: var(--ink-3); }
-  .subnav { border-top: 0; }
   body { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
   .dock {
     display: flex; justify-content: space-around; align-items: flex-end; gap: 2px;

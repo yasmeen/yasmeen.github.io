@@ -91,4 +91,21 @@
     if (document.hidden) leftAt = performance.now();
     else if (leftAt && performance.now() - leftAt > 20000) setTimeout(() => send('react', { kind: 'wave' }), 500);
   });
+
+  // the home page's headline rotates through a few titles; it holds still while motion is paused or reduced, and
+  // screen readers get all of them at once (in the hidden text beside it)
+  const roles = document.querySelector('[data-roles]');
+  if (roles) {
+    const items = [...roles.children];
+    const still = () => root.dataset.motion === 'paused' || matchMedia('(prefers-reduced-motion: reduce)').matches || document.hidden;
+    let at = 0;
+    setInterval(() => {
+      if (still()) return;
+      const prev = items[at];
+      at = (at + 1) % items.length;
+      prev.classList.remove('is-on'); prev.classList.add('is-out');
+      items[at].classList.remove('is-out'); items[at].classList.add('is-on');
+      setTimeout(() => prev.classList.remove('is-out'), 500);
+    }, 2800);
+  }
 })();

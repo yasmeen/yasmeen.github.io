@@ -83,7 +83,6 @@ export function making() {
       path: '/making-mini-yaz', active: '', pageName: 'Making Mini Yaz',
       title: `Making Mini Yaz · ${site.name}`,
       description: 'How Mini Yaz, the little vinyl character on this site, went from a clay drawing to a Finder-style toy built in Blender and animated live in the browser.',
-      subnav: [['#drawing', 'The clay girl'], ['#vinyl', 'The vinyl toy'], ['#motion', 'Motion'], ['#tests', 'Tests'], ['#details', 'Details'], ['#ship', 'Making it light']],
       main
     })
   };

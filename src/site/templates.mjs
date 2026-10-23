@@ -44,6 +44,7 @@ const footer = () => `
   <div class="wrap">
     <p class="footer-links">
 ${nav.map((n) => `      <a href="${n.href}">${n.label}</a>`).join('\n')}
+      <a href="/making-mini-yaz">Making Mini Yaz</a>
       <a href="${site.github}">GitHub</a>
       <a href="${site.linkedin}">LinkedIn</a>
     </p>
@@ -59,7 +60,7 @@ ${nav.map((n) => `      <a href="${n.href}">${n.label}</a>`).join('\n')}
   </div>
 </footer>`;
 
-export function page({ path, title, description, active, pageName, subnav = [], main, mascot: hasMascot = true, head = '', scripts = '', jsonld = null, noindex = false }) {
+export function page({ path, title, description, active, pageName, main, mascot: hasMascot = true, head = '', scripts = '', jsonld = null, noindex = false }) {
   const url = site.url + path;
   const ogImage = `${site.url}/assets/img/og.png`;
   return `<!doctype html>
@@ -96,11 +97,6 @@ ${jsonld ? `<script type="application/ld+json">${JSON.stringify(jsonld)}</script
 <a class="skip" href="#main">Skip to content</a>
 <header class="masthead">
   <a class="titlebar" href="/"><img src="/assets/img/peek.webp" alt="" width="324" height="268"><b>${site.name}</b>${pageName ? `<span>· ${pageName}</span>` : ''}</a>${tabs(active)}
-  <div class="subnav">
-    <div class="wrap">
-${subnav.map(([href, label]) => `      <a href="${href}">${esc(label)}</a>`).join('\n')}
-    </div>
-  </div>
 </header>
 
 <main id="main">
