@@ -22,7 +22,7 @@ The earlier clay version, built from the turnaround in `reference/`, is in the g
 
 ## Rebuilding the model
 
-Blender runs headless from Python (`pip install bpy==5.2.3 numpy` in a virtualenv; Blender 5.2 LTS).
+Blender runs headless from Python (`pip install bpy==5.2.3 numpy scikit-image` in a virtualenv; Blender 5.2 LTS).
 
 ```sh
 cd mini-yaz/blender

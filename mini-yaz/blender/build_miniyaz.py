@@ -116,11 +116,10 @@ def front_point(X, Z):
 # shader; these are its numbers, in Blender space.
 SPLIT_TOP, SPLIT_LOW, SPLIT_STEP = -0.02, 0.12, TOP - 0.595 * HH
 
-# ---------------- body: one short column from under the head to the ground, the legs parted by a slit ----------------
-# (z, half-width); the depth is 0.82 of the width, the section a slightly squared oval
-bodyRows = [(1.74, 0.0), (1.72, 0.33), (1.68, 0.5), (1.6, 0.6), (1.5, 0.645), (1.35, 0.675), (1.2, 0.7), (1.0, 0.725),
-            (0.85, 0.742), (0.7, 0.75), (0.55, 0.735), (0.4, 0.7), (0.29, 0.668), (0.2, 0.642), (0.13, 0.62), (0.07, 0.593),
-            (0.035, 0.552), (0.014, 0.463), (0.003, 0.33), (0.0, 0.0)]
+# ---------------- body: a short round torso on two stubby legs ----------------
+# Each part is a distance field: a column with a smooth outline and a rounded-oval section. The legs join the torso
+# with a smooth union, so they grow out of it with a soft fillet instead of a crease, and the result is meshed.
+from skimage.measure import marching_cubes
 def mono(xs, vs):
     """monotone cubic through (xs, vs), xs increasing: no overshoot and no kinks between the points (no ridges)"""
     xs, v = np.array(xs, float), np.array(vs, float); h = np.diff(xs); d = np.diff(v) / h
@@ -134,38 +133,58 @@ def mono(xs, vs):
         t = (x - xs[i]) / h[i]; t2, t3 = t * t, t * t * t
         return (2 * t3 - 3 * t2 + 1) * v[i] + (t3 - 2 * t2 + t) * h[i] * m[i] + (-2 * t3 + 3 * t2) * v[i + 1] + (t3 - t2) * h[i] * m[i + 1]
     return f
-def body_rings(rows, step=0.01):
+def profile_sdf(rows, r_max=1.4, res=0.004):
+    """rows: (z, half-width) from the top pole to the bottom pole. Returns the signed distance (negative inside) in the
+    (rho, z) plane, rho being the distance from the column's axis, as a lookup."""
     fa = mono([r[0] for r in rows][::-1], [r[1] for r in rows][::-1])
-    out = []
-    for z in np.arange(rows[0][0], rows[-1][0] - 1e-9, -step):
-        a = max(0.0, float(fa(z))); k = min(1.0, max(0.0, (z - 0.3) / 0.4))
-        out.append((float(z), a, a * 0.82, 0.0, 2.0 + 0.25 * k * k * (3 - 2 * k)))
-    out[0] = (rows[0][0], 0, 0, 0.0); out.append((0.0, 0, 0, 0.0))
-    return out
-body = loft('Body', body_rings(bodyRows), 160)
-def prism(name, outline, depth=2.0):
-    """outline: (half-width, z) pairs from the top of the cut down; mirrored in x and extruded through the body"""
-    ring = outline + [(-x, z) for (x, z) in reversed(outline)]
-    n = len(ring)
-    verts = [(x, -depth / 2, z) for (x, z) in ring] + [(x, depth / 2, z) for (x, z) in ring]
-    faces = [tuple(range(n - 1, -1, -1)), tuple(range(n, 2 * n))] + [(i, (i + 1) % n, n + (i + 1) % n, n + i) for i in range(n)]
-    me = bpy.data.meshes.new(name); me.from_pydata(verts, [], faces); me.update()
-    ob = bpy.data.objects.new(name, me); bpy.context.collection.objects.link(ob)
-    return ob
-cut = prism('Slit', [(0.006, 0.48), (0.03, 0.44), (0.036, 0.36), (0.04, 0.26), (0.045, 0.17), (0.058, 0.1), (0.08, 0.055), (0.115, 0.025), (0.155, 0.0), (0.2, -0.05)])
+    ztop, zbot = rows[0][0], rows[-1][0]
+    zs = np.linspace(ztop, zbot, 240); rs = np.array([max(0.0, float(fa(z))) for z in zs]); rs[0] = rs[-1] = 0.0
+    P = np.stack([rs, zs], 1)
+    gr = np.arange(0, r_max, res); gz = np.arange(zbot - 0.3, ztop + 0.3, res)
+    R, Z = np.meshgrid(gr, gz); q = np.stack([R.ravel(), Z.ravel()], 1)
+    d = np.full(len(q), 1e9)
+    for a, b in zip(P[:-1], P[1:]):              # distance to each piece of the outline
+        ab = b - a; t = np.clip(((q - a) @ ab) / max(ab @ ab, 1e-12), 0, 1)
+        d = np.minimum(d, np.hypot(*(q - (a + np.outer(t, ab))).T))
+    inside = (q[:, 1] < ztop) & (q[:, 1] > zbot) & (q[:, 0] < np.interp(-q[:, 1], -zs, rs))
+    T = np.where(inside, -d, d).reshape(R.shape).astype(np.float32)
+    def look(rho, z):
+        fr = np.clip(rho / res, 0, len(gr) - 1.001); fz = np.clip((z - gz[0]) / res, 0, len(gz) - 1.001)
+        i, j = fz.astype(np.int32), fr.astype(np.int32); u, v = fz - i, fr - j
+        val = T[i, j] * (1 - u) * (1 - v) + T[i + 1, j] * u * (1 - v) + T[i, j + 1] * (1 - u) * v + T[i + 1, j + 1] * u * v
+        return val + np.maximum(rho - gr[-1], 0)
+    return look
+def section(x, y, depth, n):
+    """distance from the axis in a rounded-oval section: depth is the half-depth over the half-width, n its squareness"""
+    return (np.abs(x) ** n + np.abs(y / depth) ** n) ** (1 / n)
+ramp = lambda z, a, b: np.clip((z - a) / (b - a), 0, 1)
+# the torso: widest at the belly, tapering a little to the hips, with a broad flat bottom that the legs hang from (the
+# crotch); lower down its section squares off a little and gets shallower, to sit on the two legs
+torsoRows = [(1.74, 0.0), (1.72, 0.33), (1.68, 0.5), (1.6, 0.6), (1.5, 0.645), (1.35, 0.675), (1.2, 0.7), (1.0, 0.725),
+             (0.85, 0.735), (0.7, 0.72), (0.62, 0.7), (0.57, 0.684), (0.535, 0.655), (0.515, 0.56), (0.505, 0.35), (0.5, 0.0)]
+# the legs: two short round stumps, together as wide as the torso, with rounded feet and a narrow gap between them
+LEG_X = 0.35
+legRows = [(0.85, 0.0), (0.84, 0.18), (0.81, 0.27), (0.75, 0.31), (0.62, 0.325), (0.45, 0.325), (0.3, 0.318), (0.2, 0.308),
+           (0.13, 0.296), (0.085, 0.279), (0.05, 0.252), (0.025, 0.21), (0.009, 0.15), (0.0, 0.0)]
+torsoD, legD = profile_sdf(torsoRows), profile_sdf(legRows)
+VOX = 0.011 if WEB else 0.0085
+gx = np.arange(-0.86, 0.86 + VOX, VOX, dtype=np.float32); gy = np.arange(-0.7, 0.7 + VOX, VOX, dtype=np.float32)
+gz = np.arange(-0.04, 1.8, VOX, dtype=np.float32)
+X, Y, Zg = np.meshgrid(gx, gy, gz, indexing='ij')
+k = ramp(Zg, 0.45, 1.3); k = k * k * (3 - 2 * k)
+dT = torsoD(section(X, Y, 0.72 + 0.08 * k, 2.6 - 0.4 * k), Zg)
+dL = np.minimum(legD(section(X - LEG_X, Y, 1.45, 2.0), Zg), legD(section(X + LEG_X, Y, 1.45, 2.0), Zg))
+K = 0.12                                       # how far the fillet reaches
+h = np.clip(0.5 + 0.5 * (dL - dT) / K, 0, 1)
+field = dL * (1 - h) + dT * h - K * h * (1 - h)
+del X, Y, Zg, dT, dL, h, k
+bv, bf, _, _ = marching_cubes(field, 0.0, spacing=(VOX, VOX, VOX))
+bv += np.array([gx[0], gy[0], gz[0]])
+body = mk('Body', bv, [tuple(f) for f in bf])
 bpy.ops.object.select_all(action='DESELECT')
 body.select_set(True); bpy.context.view_layer.objects.active = body
-body.data.remesh_voxel_size = 0.014 if WEB else 0.009
-bpy.ops.object.voxel_remesh()          # a clean, closed surface first, so the cut has something solid to work on
-def smooth_body(n):
-    sm = body.modifiers.new('smooth', 'SMOOTH'); sm.factor = 0.5; sm.iterations = n
-    bpy.ops.object.modifier_apply(modifier='smooth')
-smooth_body(12)                        # soften the column first, then cut the legs apart, then only round the cut's edges
-bm_ = body.modifiers.new('slit', 'BOOLEAN'); bm_.operation = 'DIFFERENCE'; bm_.object = cut; bm_.solver = 'EXACT'
-bpy.ops.object.modifier_apply(modifier='slit')
-bpy.data.objects.remove(cut, do_unlink=True)
-bpy.ops.object.voxel_remesh()
-smooth_body(5)
+sm = body.modifiers.new('smooth', 'SMOOTH'); sm.factor = 0.5; sm.iterations = 4     # just the voxel steps
+bpy.ops.object.modifier_apply(modifier='smooth')
 if WEB:
     dm = body.modifiers.new('dec', 'DECIMATE'); dm.ratio = min(1.0, 5200 / len(body.data.vertices))
     bpy.ops.object.modifier_apply(modifier='dec')

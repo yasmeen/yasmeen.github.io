@@ -423,7 +423,7 @@ export function createMiniYaz(THREE, host, data, opts) {
         const lace = plain(new THREE.TorusGeometry(0.055, 0.018, 8, 20), 0xf4a6b6);
         lace.position.set(0, 0.3, 0.27); lace.rotation.x = -0.9;
         shoe.add(sole, upper, stripe, lace);
-        shoe.position.set(s * 0.33, 0, 0.0);
+        shoe.position.set(s * 0.35, 0, 0.0);
         shoe.rotation.y = s * 0.08;
         g.add(shoe);
       });
