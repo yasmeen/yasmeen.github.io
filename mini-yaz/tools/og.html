@@ -1,0 +1,28 @@
+<!doctype html>
+<!-- The link preview image (assets/img/og.png, 1200 x 630). Rendered by og.mjs. -->
+<meta charset="utf-8">
+<link rel="stylesheet" href="/assets/css/site.css">
+<style>
+  body { margin: 0; width: 1200px; height: 630px; overflow: hidden; background: #DCEAFB; }
+  .og { position: relative; width: 1200px; height: 630px; }
+  .og h1 { position: absolute; left: 80px; top: 150px; margin: 0; font: 400 132px/0.9 var(--serif); letter-spacing: -0.035em; color: #10306B; }
+  .og p { position: absolute; left: 84px; margin: 0; color: #2C3E5E; }
+  .og .t { top: 420px; font: 400 52px/1 var(--serif); letter-spacing: -0.02em; color: #5B6F92; }
+  .og .u { top: 500px; font: 500 22px/1 var(--sans); }
+  .og .strip { position: absolute; left: 0; right: 0; top: 0; height: 34px; background: linear-gradient(#F7F7F7, #DEDEDE); border-bottom: 1px solid #B8B8B8; }
+  #box { position: absolute; left: 790px; top: 150px; width: 330px; aspect-ratio: 292 / 343; }
+</style>
+<div class="og">
+  <div class="strip"></div>
+  <h1>Yasmeen<br>Roumie</h1>
+  <p class="t">Design engineer · Miami, FL</p>
+  <p class="u">yasmeenroumie.com</p>
+  <div id="box"></div>
+</div>
+<script type="module">
+  import { createMiniYaz } from '/assets/mini-yaz/engine.js';
+  import { loadThree, loadModel } from '/assets/mini-yaz/mascot.js';
+  const [THREE, data] = await Promise.all([loadThree(), loadModel(), document.fonts.ready]);
+  window.yaz = createMiniYaz(THREE, document.getElementById('box'), data, { manual: true, preserve: true, maxDpr: 2, sleepAfter: 0, yaw: 0.2 });
+  window.ready = true;
+</script>

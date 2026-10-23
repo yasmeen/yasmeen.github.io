@@ -1,0 +1,93 @@
+// "Making Mini Yaz": how the character on this site was built.
+import { site } from './content.mjs';
+import { page, mascot, hint } from './templates.mjs';
+
+const fig = (src, w, h, alt, caption) => `<figure>
+  <img src="/assets/img/making/${src}" alt="${alt}" width="${w}" height="${h}" loading="lazy">
+  <figcaption>${caption}</figcaption>
+</figure>`;
+
+export function making() {
+  const main = `
+<article class="article" aria-labelledby="making-h">
+  <h1 id="making-h">Making Mini Yaz.</h1>
+  <p class="dek">Mini Yaz is the little vinyl version of me that lives on every page of this site: a toy in the style of Apple's Little Finder Guy, in headphones. It's modeled in Blender and animated live in your browser.</p>
+  <p class="byline">Built with Claude as my pair: I directed and reviewed every round, and Claude wrote the Blender scripts, the rig, the animation code and the tests.</p>
+
+  <div class="mascot-slot">${mascot({ pose: 'wave', label: 'Mini Yaz, waving', main: true })}</div>
+  ${hint('Tap it, drag it, or tap five times fast')}
+
+  <h2 id="drawing">It started as a clay girl</h2>
+  <p>The first Mini Yaz was a little clay girl with a blue bob and a bun, drawn as a turnaround sheet (front, three-quarter, side and back views of the same pose).</p>
+  ${fig('turnaround.webp', 1400, 586, 'Four reference images of the clay Mini Yaz from the front, three-quarter, side and back', 'The clay turnaround the first three versions were built from.')}
+
+  <h2 id="flat">Three versions that didn't make it</h2>
+  <p>The first try cut one of the pose images into parts (body, head, arms) and rotated them at the joints, with the eyes drawn live so it could blink and look around. It moved, but it looked like a paper puppet: you could see the seams, and the arms could only swing flat against the body.</p>
+  <p>The second try built a 3D character in the browser out of spheres and capsules. It could turn and wave, but it wasn't cute. The proportions drifted from the reference, and the waving hand kept disappearing behind the head.</p>
+  <p>The third was built in Blender from the turnaround itself: a script measured the drawing row by row, and a second one lofted the head, laid the hair on as a clay layer with a rolled edge, and fused the body into one piece. A tuning script even matched its colors to the drawing. It fit the drawing closely, but next to everything else it read as a grandma, not me: the bob, the bun and the rosy cheeks.</p>
+  ${fig('fit.webp', 1400, 405, 'The clay reference and the clay Blender model side by side, from the front and the side, with the reference’s outline traced over the model', 'The clay version, fitted to its turnaround.')}
+
+  <h2 id="vinyl">A vinyl toy</h2>
+  <p>The version you see now takes after Apple's Little Finder Guy, the blind-box figure with the Finder face: a big soft head split blue and white, with the line between them stepping over at the nose, tiny bead eyes and a thin smile. Mini Yaz is my version, with lashes and a pair of headphones.</p>
+  <p>The proportions were measured from a front view of the figure: how wide the head is at every height, where the eyes and the smile sit, and how far the line steps over at the nose. A fan-made 3D model of the figure, sliced at every height, settled the rest: a deep round belly that sits a little behind the head, short legs, and arms that hang close to the sides. A script in Blender builds each part from those numbers. The head is lofted ring by ring into a soft gumdrop. The body is one smooth surface described by a formula (a distance field): the torso is a column with the measured outline, and the legs and arms are cones with round ends, wide where they join and smaller at the end, each blended into the torso with a soft fillet. The arms are rigid, like the toy's: they swing from the shoulder and never bend. The headphones are distance fields too: a padded band that rests on the head, and a rounded cup with a softer cushion on each side. Blender bakes the soft shadows on the head and the headphones into the model.</p>
+  <p>The shoulders were the hard part. A mesh made in one pose has to stretch when an arm moves, and earlier versions either grew a web under a raised arm or looked like a tube stuck onto a ball. So the browser doesn't draw the body as a mesh at all. It draws the formula: for each pixel, the shader steps along the line of sight until it reaches the surface, with each arm wherever it is in that frame. The shoulder blends the same way in every pose, and the soft shadows (under the head, between the legs, under a raised arm) are measured from the same formula. Most pixels find the surface in about seven steps; the outline takes a few more.</p>
+
+  <h2 id="felt">Plastic, not felt</h2>
+  <p>In the browser, three.js draws the model as satin, pearly vinyl: a soft broad sheen rather than a sharp highlight, a thin film that shifts the color a little as the surface turns away, a cool glow at the edges, and soft shadows that lean blue, like the figure's. The blue and white aren't painted onto the model. The shader splits each part at a line, so the edge stays crisp at any size: down the middle of the body, and on the head along the Finder profile. Where the blue faces the big light at the top left it lifts toward a light cyan, like the figure. The lighting is a small virtual photo studio with a big soft panel and a key light at the top left, a dim fill, and a rim from behind.</p>
+
+  <h2 id="motion">One clock, and springs everywhere</h2>
+  <p>Everything Mini Yaz does comes from one clock, layered:</p>
+  <ul>
+    <li><strong>Breathing and idle sway</strong> come from slow sine waves with unrelated periods, so the loop never visibly repeats.</li>
+    <li><strong>Actions</strong> (the wave, the hop, the spin) are keyframes joined by curves that never overshoot, so nothing wobbles past where it was meant to stop.</li>
+    <li><strong>Attention</strong> runs on critically damped springs, the fastest kind that never bounces. The head turns to look and the body follows more slowly. The eyes are painted on, like the toy's, so they look wherever the head looks. A spring can be redirected mid-move without a jump, which is why it can follow your cursor smoothly.</li>
+    <li><strong>Squash and stretch</strong> keep the volume the same: when Mini Yaz squashes down, it gets wider.</li>
+    <li><strong>The arms have a little weight.</strong> Each swings on a soft spring, so it trails a quick move and settles with a small overshoot. They lag as Mini Yaz takes off, float up in the air, drop on landing, and lift out in a spin.</li>
+  </ul>
+  <p>You can feel the spring part in the <a href="/lab#springs">Lab</a>.</p>
+
+  <h2 id="tests">Testing animation like code</h2>
+  <p>Looking at an animation and saying "that looks off" doesn't scale, so the animations have tests. A headless browser plays each action on a fake clock and records every joint on every frame. Then it looks for:</p>
+  <ul>
+    <li><strong>Pops</strong>, frames where a joint's speed jumps instead of changing smoothly.</li>
+    <li><strong>Clipping</strong>, frames where the hand goes inside the head.</li>
+    <li><strong>Snaps</strong>, values that jump when one action ends or another interrupts it.</li>
+  </ul>
+  <p>The first run found the waving hand inside the cheek for 51 of 180 frames, a pop in the elbow at 0.43 seconds, and the spin snapping back a full turn when it ended. On the clay version, close-up renders caught the model problems: a puckered crown under the bun, ridges across the belly, and a slightly jagged fringe.</p>
+  ${fig('graphs.webp', 1400, 252, 'Three charts from the first animation audit: the elbow angle with a pop, the spin snapping back at the end, and the hand going below the head’s surface', 'From the first audit: the elbow pop, the spin snapping back, and the hand dipping inside the head.')}
+  <p>The fixes: the wave now reaches forward before it rises, and a soft guard nudges the arm away from the head if the hand gets close, easing in so it never jerks. The spin keeps its turn instead of snapping back. The crown, belly and fringe were fixed in the Blender build. The re-run found zero clipped frames. The same renders and checks run on every version since.</p>
+  ${fig('fixes.webp', 1400, 741, 'Close-ups of the clay version before and after the fixes: the hand and cheek, the crown under the bun, the belly, and the fringe edge', 'The clay version, before (top) and after (bottom).')}
+
+  <h2 id="details">Small things it does</h2>
+  <ul>
+    <li>It follows your cursor, and leans in a little when you get close.</li>
+    <li>It reacts to the page: a cheer for live projects, eyes lighting up for papers and talks.</li>
+    <li>If you use the keyboard, it looks at whatever has focus.</li>
+    <li>After a quiet minute it dozes off, and it startles awake when you come back.</li>
+    <li>Tap it five times quickly and it gets dizzy.</li>
+    <li>It wears something different on some pages: running shoes on Projects, a laptop on Work, and a map on the page that doesn't exist.</li>
+    <li>You can change its color in the <a href="/lab#playground">Lab</a>, and it keeps that color on every page.</li>
+    <li>It comes with you between pages: the new page's content swaps in, and Mini Yaz glides over to its spot there and hops as it lands.</li>
+    <li>At icon size it drops its lashes and draws its smile bolder, so the face still reads.</li>
+  </ul>
+  ${fig('moods.webp', 1400, 322, 'Five renders of Mini Yaz: resting, waving, cheering, asleep, and dizzy with spiral eyes', 'Resting, waving, cheering, asleep, dizzy.')}
+
+  <h2 id="ship">Making it light</h2>
+  <ul>
+    <li>The first page you open shows a still image of Mini Yaz, so nothing waits on the 3D. The live version loads once the page has settled, then fades in over it. After that, moving between pages keeps the same live Mini Yaz, so there's nothing to load again.</li>
+    <li>The model is packed into a 112 KB binary file, down from 430 KB, with no detail lost: the body is a few numbers and a small table of distances instead of a mesh. three.js is trimmed to the parts it uses.</li>
+    <li>It stops drawing when it's off screen or the tab is hidden, drops to 30 frames a second while asleep, and draws fewer pixels on phones or on any device that can't keep up.</li>
+    <li>If your system asks for reduced motion, it holds still. The "Pause motion" button does the same for everyone else.</li>
+  </ul>
+  <p>The Blender scripts, the model and the code are all in <a href="${site.github}/yasmeen.github.io">this site's repository</a>.</p>
+</article>`;
+  return {
+    file: 'making-mini-yaz.html',
+    html: page({
+      path: '/making-mini-yaz', active: '', pageName: 'Making Mini Yaz',
+      title: `Making Mini Yaz · ${site.name}`,
+      description: 'How Mini Yaz, the little vinyl character on this site, went from a clay drawing to a Finder-style toy built in Blender and animated live in the browser.',
+      main
+    })
+  };
+}

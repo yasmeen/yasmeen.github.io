@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lab · Yasmeen Roumie</title>
+<meta name="description" content="Small interactive experiments: play with Mini Yaz, mix an Aqua gel button, and feel how springs move.">
+<link rel="canonical" href="https://yasmeenroumie.com/lab">
+<meta name="theme-color" content="#FFFFFF">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Yasmeen Roumie">
+<meta property="og:url" content="https://yasmeenroumie.com/lab">
+<meta property="og:title" content="Lab · Yasmeen Roumie">
+<meta property="og:description" content="Small interactive experiments: play with Mini Yaz, mix an Aqua gel button, and feel how springs move.">
+<meta property="og:image" content="https://yasmeenroumie.com/assets/img/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Mini Yaz, a little blue and white vinyl version of Yasmeen, waving beside the name Yasmeen Roumie">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Lab · Yasmeen Roumie">
+<meta name="twitter:description" content="Small interactive experiments: play with Mini Yaz, mix an Aqua gel button, and feel how springs move.">
+<meta name="twitter:image" content="https://yasmeenroumie.com/assets/img/og.png">
+<link rel="icon" href="/static/img/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32.png">
+<link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+<link rel="preload" href="/assets/fonts/InstrumentSerif-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/css/site.css">
+<script>(function(){var d=document.documentElement,g=function(k){try{return localStorage.getItem(k)}catch(e){return null}},a=g('appearance');d.dataset.appearance=a==='blue'||a==='graphite'?a:(matchMedia('(prefers-color-scheme: dark)').matches?'graphite':'blue');d.dataset.motion=g('motion')==='paused'?'paused':'on'})();</script>
+<link rel="modulepreload" href="/assets/mini-yaz/mascot.js">
+<script type="module" src="/assets/mini-yaz/mascot.js"></script>
+<script src="/assets/js/site.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="masthead">
+  <a class="titlebar" href="/"><img src="/assets/img/peek.webp" alt="" width="324" height="268"><b>Yasmeen Roumie</b><span>· Lab</span></a>
+  <nav class="tabs" aria-label="Main">
+    <a class="tab tab--home" href="/" aria-label="Home"><img src="/assets/img/peek.webp" alt="" width="324" height="268"></a>
+    <a class="tab" href="/work">Work</a>
+    <a class="tab" href="/projects">Projects</a>
+    <a class="tab" href="/lab" aria-current="page">Lab</a>
+    <a class="tab" href="/about">About</a>
+  </nav>
+</header>
+
+<main id="main">
+
+<section class="page-hero">
+  <div class="copy">
+    <h1>Lab.</h1>
+    <p>Small experiments, mostly pieces of this site pulled out so you can play with them. Everything here runs live in your browser.</p>
+  </div>
+</section>
+
+<div class="lab">
+  <section class="window" id="playground" aria-labelledby="playground-h">
+    <div class="window-bar"><span class="lights" aria-hidden="true"><span></span><span></span><span></span></span><span class="title">Mini Yaz playground</span></div>
+    <div class="exp-body pinstripe">
+      <h2 id="playground-h">Mini Yaz playground</h2>
+      <p>The same character that lives on every page, with the controls showing. Try the actions, dress it up, change its color, or put it to sleep. Five quick taps also work. The color you pick follows you around the site. <a href="/making-mini-yaz">How it was made ›</a></p>
+      <div class="exp-grid">
+        <div class="stage">
+          <div class="mascot-slot">
+<div class="mini-yaz mini-yaz--main" data-pose="idle" id="play-yaz" role="group" aria-label="Mini Yaz in the playground">
+  <img class="yaz-poster" src="/assets/mini-yaz/poster-idle.webp" alt="" width="816" height="890" draggable="false" fetchpriority="high">
+  <span class="yaz-z" aria-hidden="true"><i>z</i><i>z</i><i>z</i></span>
+  <button type="button" class="yaz-hit" aria-label="Say hi to Mini Yaz"></button>
+</div></div>
+        </div>
+        <div class="controls" data-playground>
+          <div class="control-row"><b>Do something</b>
+            <span class="seg"><button type="button" data-act="wave">Wave</button><button type="button" data-act="hop">Hop</button><button type="button" data-act="spin">Spin</button><button type="button" data-act="cheer">Cheer</button><button type="button" data-act="dizzy">Dizzy</button></span>
+          </div>
+          <div class="control-row"><b>Wear or bring</b>
+            <span class="seg"><button type="button" data-prop="shoes" aria-pressed="false">Running shoes</button><button type="button" data-prop="bib" aria-pressed="false">Race bib</button><button type="button" data-prop="visor" aria-pressed="false">Headset</button><button type="button" data-prop="laptop" aria-pressed="false">Laptop</button></span>
+          </div>
+          <div class="control-row"><b>Color</b>
+            <span class="swatches"><button type="button" class="swatch" data-color="blue" aria-pressed="true" style="--sw:#2692EE" aria-label="Finder blue" title="Finder blue"></button><button type="button" class="swatch" data-color="pink" aria-pressed="false" style="--sw:#EE669E" aria-label="Pink" title="Pink"></button><button type="button" class="swatch" data-color="lilac" aria-pressed="false" style="--sw:#926EE6" aria-label="Lilac" title="Lilac"></button><button type="button" class="swatch" data-color="mint" aria-pressed="false" style="--sw:#1EB894" aria-label="Mint" title="Mint"></button><button type="button" class="swatch" data-color="tangerine" aria-pressed="false" style="--sw:#FA8C28" aria-label="Tangerine" title="Tangerine"></button><button type="button" class="swatch" data-color="graphite" aria-pressed="false" style="--sw:#545A66" aria-label="Graphite" title="Graphite"></button></span>
+          </div>
+          <div class="control-row"><b>Look</b>
+            <span class="seg"><button type="button" data-sleep>Doze off</button><button type="button" data-wire aria-pressed="false">Wireframe</button></span>
+          </div>
+          <p class="yaz-hint"><span>Drag Mini Yaz to spin it</span><button type="button" class="mini-btn" data-motion-toggle aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" class="i-pause"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg><svg viewBox="0 0 24 24" aria-hidden="true" class="i-play"><path d="M7 4v16l13-8z"/></svg><span data-motion-label>Pause motion</span></button></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="window" id="gel" aria-labelledby="gel-h">
+    <div class="window-bar"><span class="lights" aria-hidden="true"><span></span><span></span><span></span></span><span class="title">Aqua gel maker</span></div>
+    <div class="exp-body pinstripe">
+      <h2 id="gel-h">Aqua gel maker</h2>
+      <p>The glossy "gel" look from Mac OS X, the one on the buttons and tabs here. It is two gradients: a hard-edged white shine on the top half, over a light-to-dark fill. Pick a color and copy the CSS.</p>
+      <div class="exp-grid">
+        <div class="stage gelmaker-out" data-gel-out>
+          <button type="button" class="btn" data-gel-preview>Say hi</button>
+          <code data-gel-css tabindex="0" aria-label="CSS for this gel"></code>
+        </div>
+        <div class="controls" data-gel>
+          <div class="control-row"><b>Color</b><label><input type="color" value="#2F7FE0" data-gel-color> <span data-gel-hex>#2F7FE0</span></label></div>
+          <div class="control-row"><b>Shape</b><span class="seg"><button type="button" data-gel-shape="999px" aria-pressed="true">Pill</button><button type="button" data-gel-shape="10px" aria-pressed="false">Rounded</button><button type="button" data-gel-shape="4px" aria-pressed="false">Square</button></span></div>
+          <div class="control-row"><b>Shine</b><input type="range" min="0" max="100" value="58" data-gel-shine aria-label="Shine"></div>
+          <div class="control-row"><b>Label</b><label><input type="text" value="Say hi" maxlength="24" data-gel-label aria-label="Button label" style="font: 14px var(--sans); padding: 6px 8px; border-radius: 6px; border: 1px solid var(--seg-line); background: var(--win-panel); color: var(--ink)"></label></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="window" id="springs" aria-labelledby="springs-h">
+    <div class="window-bar"><span class="lights" aria-hidden="true"><span></span><span></span><span></span></span><span class="title">Springs, not keyframes</span></div>
+    <div class="exp-body pinstripe">
+      <h2 id="springs-h">Springs, not keyframes</h2>
+      <p>Mini Yaz's head and body follow you with critically damped springs, the fastest kind that never overshoots. Move around the pad. The blue dot is a spring; the gray one restarts a 400 ms ease every time the target moves, so it lurches whenever you change direction.</p>
+      <div class="exp-grid">
+        <div class="spring-pad" data-spring-pad><canvas></canvas><p>Drag or move here</p></div>
+        <div class="controls">
+          <div class="control-row"><b>Stiffness (how fast it catches up)</b><input type="range" min="2" max="30" step="0.5" value="9" data-spring-omega aria-label="Stiffness"></div>
+          <div class="control-row"><label><input type="checkbox" data-spring-ghost checked> Show the eased dot</label></div>
+          <p style="margin: 0; font-size: 13px; line-height: 1.6; color: var(--ink-3)">Each frame: <code style="font: 12px ui-monospace, Menlo, monospace">x += (v + w·d)·dt·e<sup>−w·dt</sup></code>, with velocity carried over, so a new target bends the path instead of restarting it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <p class="footer-links">
+      <a href="/">Home</a>
+      <a href="/work">Work</a>
+      <a href="/projects">Projects</a>
+      <a href="/lab">Lab</a>
+      <a href="/about">About</a>
+      <a href="/making-mini-yaz">Making Mini Yaz</a>
+      <a href="https://github.com/yasmeen">GitHub</a>
+      <a href="https://bit.ly/yasmeen-linkedin">LinkedIn</a>
+    </p>
+    <div class="footer-prefs">
+      <span><span id="appearance-label">Appearance</span>
+        <span class="seg" role="group" aria-labelledby="appearance-label">
+          <button type="button" data-appearance-option="auto" aria-pressed="true">Auto</button><button type="button" data-appearance-option="blue" aria-pressed="false">Blue</button><button type="button" data-appearance-option="graphite" aria-pressed="false">Graphite</button>
+        </span>
+      </span>
+      <button type="button" class="mini-btn" data-motion-toggle aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" class="i-pause"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg><svg viewBox="0 0 24 24" aria-hidden="true" class="i-play"><path d="M7 4v16l13-8z"/></svg><span data-motion-label>Pause motion</span></button>
+    </div>
+    <p class="copy">Copyright © 2026 Yasmeen Roumie. Made with love in Miami, FL.</p>
+  </div>
+</footer>
+
+<nav class="dock" aria-label="Main">
+  <a href="/"><span class="dock-icon dock-icon--home"><img src="/assets/img/peek.webp" alt="" width="324" height="268"></span>Home</a>
+  <a href="/work"><span class="dock-icon gel-blue"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg></span>Work</a>
+  <a href="/projects"><span class="dock-icon gel-orange"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 12-8.4 8.4a1.5 1.5 0 0 1-3-3L12 9"/><path d="m18 15 4-4"/><path d="m21.5 11.5-1.9-1.9a2 2 0 0 1-.6-1.4V7l-2.3-2.3A6 6 0 0 0 12.5 3H9l.9.8A6.2 6.2 0 0 1 12 8.4V10l2 2h1.2a2 2 0 0 1 1.4.6l1.9 1.9"/></svg></span>Projects</a>
+  <a href="/lab" aria-current="page"><span class="dock-icon gel-purple"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2v7.5a2 2 0 0 1-.2.9L4.7 20.5a1 1 0 0 0 .9 1.5h12.8a1 1 0 0 0 .9-1.5l-5.1-10.1a2 2 0 0 1-.2-.9V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg></span>Lab</a>
+  <a href="/about"><span class="dock-icon gel-green"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg></span>About</a>
+</nav>
+<script type="module" src="/assets/js/lab.js"></script>
+</body>
+</html>

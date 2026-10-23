@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Making Mini Yaz · Yasmeen Roumie</title>
+<meta name="description" content="How Mini Yaz, the little vinyl character on this site, went from a clay drawing to a Finder-style toy built in Blender and animated live in the browser.">
+<link rel="canonical" href="https://yasmeenroumie.com/making-mini-yaz">
+<meta name="theme-color" content="#FFFFFF">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Yasmeen Roumie">
+<meta property="og:url" content="https://yasmeenroumie.com/making-mini-yaz">
+<meta property="og:title" content="Making Mini Yaz · Yasmeen Roumie">
+<meta property="og:description" content="How Mini Yaz, the little vinyl character on this site, went from a clay drawing to a Finder-style toy built in Blender and animated live in the browser.">
+<meta property="og:image" content="https://yasmeenroumie.com/assets/img/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Mini Yaz, a little blue and white vinyl version of Yasmeen, waving beside the name Yasmeen Roumie">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Making Mini Yaz · Yasmeen Roumie">
+<meta name="twitter:description" content="How Mini Yaz, the little vinyl character on this site, went from a clay drawing to a Finder-style toy built in Blender and animated live in the browser.">
+<meta name="twitter:image" content="https://yasmeenroumie.com/assets/img/og.png">
+<link rel="icon" href="/static/img/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32.png">
+<link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+<link rel="preload" href="/assets/fonts/InstrumentSerif-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/css/site.css">
+<script>(function(){var d=document.documentElement,g=function(k){try{return localStorage.getItem(k)}catch(e){return null}},a=g('appearance');d.dataset.appearance=a==='blue'||a==='graphite'?a:(matchMedia('(prefers-color-scheme: dark)').matches?'graphite':'blue');d.dataset.motion=g('motion')==='paused'?'paused':'on'})();</script>
+<link rel="modulepreload" href="/assets/mini-yaz/mascot.js">
+<script type="module" src="/assets/mini-yaz/mascot.js"></script>
+<script src="/assets/js/site.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="masthead">
+  <a class="titlebar" href="/"><img src="/assets/img/peek.webp" alt="" width="324" height="268"><b>Yasmeen Roumie</b><span>· Making Mini Yaz</span></a>
+  <nav class="tabs" aria-label="Main">
+    <a class="tab tab--home" href="/" aria-label="Home"><img src="/assets/img/peek.webp" alt="" width="324" height="268"></a>
+    <a class="tab" href="/work">Work</a>
+    <a class="tab" href="/projects">Projects</a>
+    <a class="tab" href="/lab">Lab</a>
+    <a class="tab" href="/about">About</a>
+  </nav>
+</header>
+
+<main id="main">
+
+<article class="article" aria-labelledby="making-h">
+  <h1 id="making-h">Making Mini Yaz.</h1>
+  <p class="dek">Mini Yaz is the little vinyl version of me that lives on every page of this site: a toy in the style of Apple's Little Finder Guy, in headphones. It's modeled in Blender and animated live in your browser.</p>
+  <p class="byline">Built with Claude as my pair: I directed and reviewed every round, and Claude wrote the Blender scripts, the rig, the animation code and the tests.</p>
+
+  <div class="mascot-slot">
+<div class="mini-yaz mini-yaz--main" data-pose="wave" role="group" aria-label="Mini Yaz, waving">
+  <img class="yaz-poster" src="/assets/mini-yaz/poster-idle.webp" alt="" width="816" height="890" draggable="false" fetchpriority="high">
+  <span class="yaz-z" aria-hidden="true"><i>z</i><i>z</i><i>z</i></span>
+  <button type="button" class="yaz-hit" aria-label="Say hi to Mini Yaz"></button>
+</div></div>
+  <p class="yaz-hint"><span>Tap it, drag it, or tap five times fast</span><button type="button" class="mini-btn" data-motion-toggle aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" class="i-pause"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg><svg viewBox="0 0 24 24" aria-hidden="true" class="i-play"><path d="M7 4v16l13-8z"/></svg><span data-motion-label>Pause motion</span></button></p>
+
+  <h2 id="drawing">It started as a clay girl</h2>
+  <p>The first Mini Yaz was a little clay girl with a blue bob and a bun, drawn as a turnaround sheet (front, three-quarter, side and back views of the same pose).</p>
+  <figure>
+  <img src="/assets/img/making/turnaround.webp" alt="Four reference images of the clay Mini Yaz from the front, three-quarter, side and back" width="1400" height="586" loading="lazy">
+  <figcaption>The clay turnaround the first three versions were built from.</figcaption>
+</figure>
+
+  <h2 id="flat">Three versions that didn't make it</h2>
+  <p>The first try cut one of the pose images into parts (body, head, arms) and rotated them at the joints, with the eyes drawn live so it could blink and look around. It moved, but it looked like a paper puppet: you could see the seams, and the arms could only swing flat against the body.</p>
+  <p>The second try built a 3D character in the browser out of spheres and capsules. It could turn and wave, but it wasn't cute. The proportions drifted from the reference, and the waving hand kept disappearing behind the head.</p>
+  <p>The third was built in Blender from the turnaround itself: a script measured the drawing row by row, and a second one lofted the head, laid the hair on as a clay layer with a rolled edge, and fused the body into one piece. A tuning script even matched its colors to the drawing. It fit the drawing closely, but next to everything else it read as a grandma, not me: the bob, the bun and the rosy cheeks.</p>
+  <figure>
+  <img src="/assets/img/making/fit.webp" alt="The clay reference and the clay Blender model side by side, from the front and the side, with the reference’s outline traced over the model" width="1400" height="405" loading="lazy">
+  <figcaption>The clay version, fitted to its turnaround.</figcaption>
+</figure>
+
+  <h2 id="vinyl">A vinyl toy</h2>
+  <p>The version you see now takes after Apple's Little Finder Guy, the blind-box figure with the Finder face: a big soft head split blue and white, with the line between them stepping over at the nose, tiny bead eyes and a thin smile. Mini Yaz is my version, with lashes and a pair of headphones.</p>
+  <p>The proportions were measured from a front view of the figure: how wide the head is at every height, where the eyes and the smile sit, and how far the line steps over at the nose. A fan-made 3D model of the figure, sliced at every height, settled the rest: a deep round belly that sits a little behind the head, short legs, and arms that hang close to the sides. A script in Blender builds each part from those numbers. The head is lofted ring by ring into a soft gumdrop. The body is one smooth surface described by a formula (a distance field): the torso is a column with the measured outline, and the legs and arms are cones with round ends, wide where they join and smaller at the end, each blended into the torso with a soft fillet. The arms are rigid, like the toy's: they swing from the shoulder and never bend. The headphones are distance fields too: a padded band that rests on the head, and a rounded cup with a softer cushion on each side. Blender bakes the soft shadows on the head and the headphones into the model.</p>
+  <p>The shoulders were the hard part. A mesh made in one pose has to stretch when an arm moves, and earlier versions either grew a web under a raised arm or looked like a tube stuck onto a ball. So the browser doesn't draw the body as a mesh at all. It draws the formula: for each pixel, the shader steps along the line of sight until it reaches the surface, with each arm wherever it is in that frame. The shoulder blends the same way in every pose, and the soft shadows (under the head, between the legs, under a raised arm) are measured from the same formula. Most pixels find the surface in about seven steps; the outline takes a few more.</p>
+
+  <h2 id="felt">Plastic, not felt</h2>
+  <p>In the browser, three.js draws the model as satin, pearly vinyl: a soft broad sheen rather than a sharp highlight, a thin film that shifts the color a little as the surface turns away, a cool glow at the edges, and soft shadows that lean blue, like the figure's. The blue and white aren't painted onto the model. The shader splits each part at a line, so the edge stays crisp at any size: down the middle of the body, and on the head along the Finder profile. Where the blue faces the big light at the top left it lifts toward a light cyan, like the figure. The lighting is a small virtual photo studio with a big soft panel and a key light at the top left, a dim fill, and a rim from behind.</p>
+
+  <h2 id="motion">One clock, and springs everywhere</h2>
+  <p>Everything Mini Yaz does comes from one clock, layered:</p>
+  <ul>
+    <li><strong>Breathing and idle sway</strong> come from slow sine waves with unrelated periods, so the loop never visibly repeats.</li>
+    <li><strong>Actions</strong> (the wave, the hop, the spin) are keyframes joined by curves that never overshoot, so nothing wobbles past where it was meant to stop.</li>
+    <li><strong>Attention</strong> runs on critically damped springs, the fastest kind that never bounces. The head turns to look and the body follows more slowly. The eyes are painted on, like the toy's, so they look wherever the head looks. A spring can be redirected mid-move without a jump, which is why it can follow your cursor smoothly.</li>
+    <li><strong>Squash and stretch</strong> keep the volume the same: when Mini Yaz squashes down, it gets wider.</li>
+    <li><strong>The arms have a little weight.</strong> Each swings on a soft spring, so it trails a quick move and settles with a small overshoot. They lag as Mini Yaz takes off, float up in the air, drop on landing, and lift out in a spin.</li>
+  </ul>
+  <p>You can feel the spring part in the <a href="/lab#springs">Lab</a>.</p>
+
+  <h2 id="tests">Testing animation like code</h2>
+  <p>Looking at an animation and saying "that looks off" doesn't scale, so the animations have tests. A headless browser plays each action on a fake clock and records every joint on every frame. Then it looks for:</p>
+  <ul>
+    <li><strong>Pops</strong>, frames where a joint's speed jumps instead of changing smoothly.</li>
+    <li><strong>Clipping</strong>, frames where the hand goes inside the head.</li>
+    <li><strong>Snaps</strong>, values that jump when one action ends or another interrupts it.</li>
+  </ul>
+  <p>The first run found the waving hand inside the cheek for 51 of 180 frames, a pop in the elbow at 0.43 seconds, and the spin snapping back a full turn when it ended. On the clay version, close-up renders caught the model problems: a puckered crown under the bun, ridges across the belly, and a slightly jagged fringe.</p>
+  <figure>
+  <img src="/assets/img/making/graphs.webp" alt="Three charts from the first animation audit: the elbow angle with a pop, the spin snapping back at the end, and the hand going below the head’s surface" width="1400" height="252" loading="lazy">
+  <figcaption>From the first audit: the elbow pop, the spin snapping back, and the hand dipping inside the head.</figcaption>
+</figure>
+  <p>The fixes: the wave now reaches forward before it rises, and a soft guard nudges the arm away from the head if the hand gets close, easing in so it never jerks. The spin keeps its turn instead of snapping back. The crown, belly and fringe were fixed in the Blender build. The re-run found zero clipped frames. The same renders and checks run on every version since.</p>
+  <figure>
+  <img src="/assets/img/making/fixes.webp" alt="Close-ups of the clay version before and after the fixes: the hand and cheek, the crown under the bun, the belly, and the fringe edge" width="1400" height="741" loading="lazy">
+  <figcaption>The clay version, before (top) and after (bottom).</figcaption>
+</figure>
+
+  <h2 id="details">Small things it does</h2>
+  <ul>
+    <li>It follows your cursor, and leans in a little when you get close.</li>
+    <li>It reacts to the page: a cheer for live projects, eyes lighting up for papers and talks.</li>
+    <li>If you use the keyboard, it looks at whatever has focus.</li>
+    <li>After a quiet minute it dozes off, and it startles awake when you come back.</li>
+    <li>Tap it five times quickly and it gets dizzy.</li>
+    <li>It wears something different on some pages: running shoes on Projects, a laptop on Work, and a map on the page that doesn't exist.</li>
+    <li>You can change its color in the <a href="/lab#playground">Lab</a>, and it keeps that color on every page.</li>
+    <li>It comes with you between pages: the new page's content swaps in, and Mini Yaz glides over to its spot there and hops as it lands.</li>
+    <li>At icon size it drops its lashes and draws its smile bolder, so the face still reads.</li>
+  </ul>
+  <figure>
+  <img src="/assets/img/making/moods.webp" alt="Five renders of Mini Yaz: resting, waving, cheering, asleep, and dizzy with spiral eyes" width="1400" height="322" loading="lazy">
+  <figcaption>Resting, waving, cheering, asleep, dizzy.</figcaption>
+</figure>
+
+  <h2 id="ship">Making it light</h2>
+  <ul>
+    <li>The first page you open shows a still image of Mini Yaz, so nothing waits on the 3D. The live version loads once the page has settled, then fades in over it. After that, moving between pages keeps the same live Mini Yaz, so there's nothing to load again.</li>
+    <li>The model is packed into a 112 KB binary file, down from 430 KB, with no detail lost: the body is a few numbers and a small table of distances instead of a mesh. three.js is trimmed to the parts it uses.</li>
+    <li>It stops drawing when it's off screen or the tab is hidden, drops to 30 frames a second while asleep, and draws fewer pixels on phones or on any device that can't keep up.</li>
+    <li>If your system asks for reduced motion, it holds still. The "Pause motion" button does the same for everyone else.</li>
+  </ul>
+  <p>The Blender scripts, the model and the code are all in <a href="https://github.com/yasmeen/yasmeen.github.io">this site's repository</a>.</p>
+</article>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <p class="footer-links">
+      <a href="/">Home</a>
+      <a href="/work">Work</a>
+      <a href="/projects">Projects</a>
+      <a href="/lab">Lab</a>
+      <a href="/about">About</a>
+      <a href="/making-mini-yaz">Making Mini Yaz</a>
+      <a href="https://github.com/yasmeen">GitHub</a>
+      <a href="https://bit.ly/yasmeen-linkedin">LinkedIn</a>
+    </p>
+    <div class="footer-prefs">
+      <span><span id="appearance-label">Appearance</span>
+        <span class="seg" role="group" aria-labelledby="appearance-label">
+          <button type="button" data-appearance-option="auto" aria-pressed="true">Auto</button><button type="button" data-appearance-option="blue" aria-pressed="false">Blue</button><button type="button" data-appearance-option="graphite" aria-pressed="false">Graphite</button>
+        </span>
+      </span>
+      <button type="button" class="mini-btn" data-motion-toggle aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" class="i-pause"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg><svg viewBox="0 0 24 24" aria-hidden="true" class="i-play"><path d="M7 4v16l13-8z"/></svg><span data-motion-label>Pause motion</span></button>
+    </div>
+    <p class="copy">Copyright © 2026 Yasmeen Roumie. Made with love in Miami, FL.</p>
+  </div>
+</footer>
+
+<nav class="dock" aria-label="Main">
+  <a href="/"><span class="dock-icon dock-icon--home"><img src="/assets/img/peek.webp" alt="" width="324" height="268"></span>Home</a>
+  <a href="/work"><span class="dock-icon gel-blue"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg></span>Work</a>
+  <a href="/projects"><span class="dock-icon gel-orange"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 12-8.4 8.4a1.5 1.5 0 0 1-3-3L12 9"/><path d="m18 15 4-4"/><path d="m21.5 11.5-1.9-1.9a2 2 0 0 1-.6-1.4V7l-2.3-2.3A6 6 0 0 0 12.5 3H9l.9.8A6.2 6.2 0 0 1 12 8.4V10l2 2h1.2a2 2 0 0 1 1.4.6l1.9 1.9"/></svg></span>Projects</a>
+  <a href="/lab"><span class="dock-icon gel-purple"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2v7.5a2 2 0 0 1-.2.9L4.7 20.5a1 1 0 0 0 .9 1.5h12.8a1 1 0 0 0 .9-1.5l-5.1-10.1a2 2 0 0 1-.2-.9V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg></span>Lab</a>
+  <a href="/about"><span class="dock-icon gel-green"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg></span>About</a>
+</nav>
+</body>
+</html>
