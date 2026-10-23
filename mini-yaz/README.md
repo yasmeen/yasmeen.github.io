@@ -1,48 +1,46 @@
 # Mini Yaz
 
-The little clay character on yasmeenroumie.com. The write-up is at [/making-mini-yaz](https://yasmeenroumie.com/making-mini-yaz).
+The little vinyl character on yasmeenroumie.com: a toy in the style of Apple's Little Finder Guy, as a girl (a bow and
+lashes). The write-up is at [/making-mini-yaz](https://yasmeenroumie.com/making-mini-yaz).
 
 ## How it fits together
 
 ```
-reference/turn-*.png                    the turnaround the model is measured from
-  └─ blender/profiles.py                measures the front and side outlines  ->  blender/profiles.json
-       └─ blender/build_miniyaz.py      builds the model in Blender            ->  blender/miniyaz.blend
-            └─ blender/export_web.py    bakes shading, writes the web export   ->  miniyaz.json
-                 └─ tools/pack-model.mjs   packs it for the site               ->  ../assets/mini-yaz/model.bin
+blender/build_miniyaz.py          builds the model in Blender             ->  blender/miniyaz.blend
+  └─ blender/export_web.py        bakes shading, writes the web export    ->  miniyaz.json
+       └─ tools/pack-model.mjs    packs it for the site                   ->  ../assets/mini-yaz/model.bin
 ```
+
+The proportions in `build_miniyaz.py` (the head's width at every height, where the eyes and smile sit, where the
+blue-and-white line steps over at the nose) were measured from a front view of the Finder figure.
 
 In the browser, `assets/mini-yaz/mascot.js` mounts every `.mini-yaz` on a page and `assets/mini-yaz/engine.js` draws and
 animates it with three.js (r169, trimmed to what's used in `assets/mini-yaz/three.min.js`). `miniyaz.json` is also the
 fallback for browsers that can't unpack `model.bin`.
 
+The earlier clay version, built from the turnaround in `reference/`, is in the git history.
+
 ## Rebuilding the model
 
-Blender runs headless from Python (`pip install bpy==5.2.3 numpy pillow` in a virtualenv; Blender 5.2 LTS).
+Blender runs headless from Python (`pip install bpy==5.2.3 numpy` in a virtualenv; Blender 5.2 LTS).
 
 ```sh
 cd mini-yaz/blender
-python profiles.py ../reference/                          # measures the reference -> profiles.json
-WEB=1 SAMPLES=16 python build_miniyaz.py -- "$PWD" norender   # builds and bakes -> miniyaz.json
+WEB=1 python build_miniyaz.py -- "$PWD" norender   # builds and bakes -> miniyaz.json
 mv miniyaz.json ../ && cd ../..
-npm run build:model                                       # packs it -> assets/mini-yaz/model.bin
+npm run build:model                                 # packs it -> assets/mini-yaz/model.bin
 ```
 
 Leave out `WEB=1` and `norender` to build the full-resolution model and render front, side and hero views (`r_*.png`;
-the output folder must be an absolute path, as above);
-`compare.py` puts those next to the reference with its outline traced over them.
+the output folder must be an absolute path, as above).
 
-## Matching the reference's look
+## The look
 
-Every lighting and material value lives in `LOOK` at the top of `assets/mini-yaz/engine.js`. They were tuned against
-the reference automatically: `tools/tune.html` renders the front and side views, lines each up with
-`reference/turn-front.png` and `turn-side.png`, and scores the average color difference after a slight blur;
-`tools/tune.mjs` nudges each setting and keeps what lowers the score.
-
-```sh
-npm run serve                                            # in one terminal
-node mini-yaz/tools/tune.mjs out.json [start.json] [passes]   # then copy the result into LOOK
-```
+Every lighting and material value lives in `LOOK` at the top of `assets/mini-yaz/engine.js`, and `setLook()` changes
+them live. The material is glossy vinyl with the shading baked in Blender. The blue and white aren't painted on the
+model: the shader splits each part at a line (on the head, the Finder profile, stepping over at the nose), so the edge
+stays crisp at any size. Where the blue faces the big top-left light it lifts toward a light cyan, like the figure.
+`LOOK.bow` sets the bow's color (it's the Finder blue unless set).
 
 ## Rendering images of Mini Yaz
 
@@ -64,6 +62,7 @@ channel offsets), props, and crop.
   overshoot, and attention (eyes, then head, then body) on critically damped springs.
 - Actions: `wave`, `hop`, `spin`, `cheer`, `dizzy` (five quick taps), `startle` (waking from a nap). It dozes off after
   a quiet minute.
+- The bow lags the head by about a tenth of a second, so it settles after every move.
 - Props: `laptop`, `shoes`, `map`, `bib`, `trophy`, `visor`, `phone`, `coin`. Held props ride on the body and are moved to
   the hand every frame, so they stay upright.
 - It pauses off screen and in hidden tabs, holds still for reduced motion or when motion is paused, caps the resolution

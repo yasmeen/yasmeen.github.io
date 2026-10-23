@@ -8,8 +8,7 @@
     "build:model": "node mini-yaz/tools/pack-model.mjs",
     "serve": "http-server . -p 8130 -c-1 -e html",
     "render:art": "node mini-yaz/tools/render.mjs mini-yaz/tools/art.json",
-    "render:og": "node mini-yaz/tools/og.mjs",
-    "tune:look": "node mini-yaz/tools/tune.mjs mini-yaz/tools/look.json"
+    "render:og": "node mini-yaz/tools/og.mjs"
   },
   "repository": {
     "type": "git",

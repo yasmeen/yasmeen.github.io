@@ -1,7 +1,7 @@
-// Mini Yaz: a live 3D clay character. The model is built in Blender (fitted to the turnaround drawing, shading baked)
-// and drawn here with three.js (r169), driven by one clock: idle life, attention (follows the pointer),
+// Mini Yaz: a live 3D vinyl toy, in the style of Apple's Little Finder Guy. The model is built in Blender (shading
+// baked) and drawn here with three.js (r169), driven by one clock: idle life, attention (follows the pointer),
 // reactions (wave, hop, spin, dizzy), dozing off when nobody is around, and drag-to-spin.
-// World units: ground at y = 0, about 3.4 tall; Mini Yaz faces +z.
+// World units: ground at y = 0, 3.15 to the top of the head; Mini Yaz faces +z.
 export function createMiniYaz(THREE, host, data, opts) {
   opts = opts || {};
   const BOX_H = 3.56;                          // world units shown by the layout box (the old 292 x 343 sprite box)
@@ -20,19 +20,16 @@ export function createMiniYaz(THREE, host, data, opts) {
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: coarse ? 'low-power' : 'high-performance', preserveDrawingBuffer: !!opts.preserve });
   } catch (e) { return null; }
   if (!renderer.getContext()) return null;
-  // every lighting and material value in one place, so the look can be tuned against the reference
-  // (mini-yaz/tools/tune.html) and changed live with setLook()
+  // every lighting and material value in one place, so the look can be changed live with setLook()
   const LOOK = Object.assign({
-    // tuned against reference/turn-front.png and turn-side.png (average color difference 11.2 -> 5.5)
-    exposure: 0.84, env: 1.0, soft: 2.7, fill: 4.0, top: 3.7, rim: 1.6, room: 0.76,
-    key: 1.1, keyX: 7, keyY: 3.75, keyZ: 3.75, hemi: 0.35,
-    blue: [63, 117, 186], cream: [241, 229, 221], pink: [248, 192, 186],
-    rough: 0.5, roughFace: 0.82, sheen: 0.8, sheenFace: 1.0, sheenTint: 0.3,
-    aoPow: 1.15, aoPowFace: 0.5, aoDirect: 0.55, sss: 0, sssFace: 0.06, felt: 1.0, bump: 0.0045, bumpFace: 0.0026,
-    edge: 0.25, edgeFace: 0.4,
-    // the face, measured from the reference
-    blushR: 0.11, blushSoft: 0.016, blushUp: 0.02, blushK: 1.0, eyeSeat: 0.14,
-    mouthW: 0.74, mouthR: 0.024, eyeGloss: 0.9, eyeW: 1.12, glint: 0.62
+    exposure: 0.95, env: 1.0, soft: 3.0, fill: 1.0, top: 2.0, rim: 1.5, room: 0.3,
+    key: 2.6, keyX: -4, keyY: 6, keyZ: 6, hemi: 0.1,
+    // glossy vinyl, Finder blue and white; the blue lifts toward a light cyan where it faces the top-left light
+    blue: [38, 146, 238], white: [232, 237, 245], bow: null, cyan: [125, 218, 255], lift: 0.7,
+    rough: 0.44, spec: 0.5, coat: 0.3, coatRough: 0.42,
+    aoPow: 1.8, aoDirect: 0.6, sss: 0.04, edge: 0.4,
+    // the face: bead eyes with lashes, a thin smile
+    eyeSeat: 0.04, mouthW: 1.0, mouthR: 0.016, eyeGloss: 1.0, eyeW: 1.0, glint: 0.55, lash: 1.0
   }, opts.look || {});
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NeutralToneMapping;
@@ -48,14 +45,14 @@ export function createMiniYaz(THREE, host, data, opts) {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(18, 1, 0.1, 100);
 
-  // a soft studio lit mostly from the front right, like the reference: a bright panel there and a key light from that side,
-  // a softer panel front left, an overhead, and a rim from behind
+  // a cool, soft studio: a big bright panel and a key light from the top left, a dim fill on the right, an overhead,
+  // and a rim from behind
   const pmrem = new THREE.PMREMGenerator(renderer);
   let envTex = null;
   const buildEnv = () => {
     const env = new THREE.Scene();
     const room = LOOK.room;
-    env.add(new THREE.Mesh(new THREE.BoxGeometry(14, 14, 14), new THREE.MeshBasicMaterial({ color: new THREE.Color(room, room * 0.982, room * 0.955), side: THREE.BackSide })));
+    env.add(new THREE.Mesh(new THREE.BoxGeometry(14, 14, 14), new THREE.MeshBasicMaterial({ color: new THREE.Color(room * 0.93, room * 0.97, room), side: THREE.BackSide })));
     const panel = (w, h, x, y, z, lum) => {
       const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(lum, lum, lum), side: THREE.DoubleSide }));
       p.position.set(x, y, z); p.lookAt(0, 0, 0); env.add(p);
@@ -71,85 +68,55 @@ export function createMiniYaz(THREE, host, data, opts) {
   };
   buildEnv();
   scene.environmentIntensity = LOOK.env;
-  const key = new THREE.DirectionalLight(0xfff8f0, LOOK.key);
+  const key = new THREE.DirectionalLight(0xffffff, LOOK.key);
   key.position.set(LOOK.keyX, LOOK.keyY, LOOK.keyZ);
   scene.add(key);
-  const hemi = new THREE.HemisphereLight(0xffffff, 0xe9dccf, LOOK.hemi);
+  const hemi = new THREE.HemisphereLight(0xffffff, 0xc9d6e8, LOOK.hemi);
   scene.add(hemi);
 
-  // ---------- matte clay, with the shading baked in Blender (vertex AO) ----------
-  const CLAY = `
-varying vec3 vObj;
-varying float vAO;
-uniform float uGrain;
-uniform float uBump;
-float bh(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
-float vn(vec3 x) {
-  vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 - 2.0 * f);
-  return mix(mix(mix(bh(i), bh(i + vec3(1, 0, 0)), f.x), mix(bh(i + vec3(0, 1, 0)), bh(i + vec3(1, 1, 0)), f.x), f.y),
-             mix(mix(bh(i + vec3(0, 0, 1)), bh(i + vec3(1, 0, 1)), f.x), mix(bh(i + vec3(0, 1, 1)), bh(i + vec3(1, 1, 1)), f.x), f.y), f.z);
-}
-float clayH(vec3 p) { p *= uGrain; return vn(p) * 0.45 + vn(p * 2.3 + 3.1) * 0.27 + vn(p * 5.1 + 7.7) * 0.16 + vn(p * vec3(11.0, 13.0, 11.0) + 1.7) * 0.12; }   // the last octave: felt fibres
-float feltTone(vec3 p) { p *= uGrain; return (vn(p * 2.9 + 5.3) - 0.5) * 0.07 + (vn(p * 8.7 + 2.1) - 0.5) * 0.05; }
-vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
-  vec3 dpx = dFdx(sp); vec3 dpy = dFdy(sp);
-  // fade the grain out as it nears pixel size (small on screen), so it never shimmers
-  float lod = clamp(1.6 - length(fwidth(vObj)) * uGrain * 4.0, 0.0, 1.0);
-  vec2 dh = vec2(dFdx(h), dFdy(h)) * uBump * lod;
-  vec3 r1 = cross(dpy, sn); vec3 r2 = cross(sn, dpx);
-  float det = dot(dpx, r1) * fd;
-  vec3 g = sign(det) * (dh.x * r1 + dh.y * r2);
-  return normalize(abs(det) * sn - g);
-}`;
+  // ---------- glossy vinyl in two colors, with the shading baked in Blender (vertex AO) ----------
   // shared uniforms, so a look change never recompiles a shader
-  const uni = (face) => ({
-    uAoPow: { value: face && LOOK.aoPowFace != null ? LOOK.aoPowFace : LOOK.aoPow }, uAoDirect: { value: LOOK.aoDirect }, uSss: { value: face ? LOOK.sssFace : LOOK.sss },
-    uFelt: { value: LOOK.felt }, uEdge: { value: face ? LOOK.edgeFace : LOOK.edge }
-  });
-  const U = { clay: uni(false), face: uni(true), props: uni(false) };
+  const U = { uAoPow: { value: LOOK.aoPow }, uAoDirect: { value: LOOK.aoDirect }, uSss: { value: LOOK.sss }, uEdge: { value: LOOK.edge }, uLift: { value: LOOK.lift } };
   const faceUni = {
-    uBlushP: { value: new THREE.Vector3(0.56, 0.4, 0.6) }, uBlushR: { value: new THREE.Vector2(LOOK.blushR, LOOK.blushSoft) },
     uEyeA: { value: new THREE.Vector3(0, -9, 0) }, uEyeB: { value: new THREE.Vector3(0, -9, 0) }, uEyeS: { value: new THREE.Vector3(1, 1, 1) }, uEyeK: { value: LOOK.eyeSeat }
   };
-  const clay = (hex, o) => {
+  const mats = [];
+  // the lifted color for a base color: blues lift toward the light cyan, whites stay white
+  const liftOf = (c) => { const hsl = {}; c.getHSL(hsl); return Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b) > 0.3 && hsl.h > 0.5 && hsl.h < 0.7 ? rgb(LOOK.cyan) : c.clone(); };
+  // a: the color left of the split (your left), b: right of it. split: [x, x below the nose, nose height, softness];
+  // profile: the head's Finder face, where the line steps over below the nose (on the front only)
+  const vinyl = (a, b, o) => {
     o = o || {};
     const m = new THREE.MeshPhysicalMaterial({
-      color: hex, roughness: o.rough ?? LOOK.rough, metalness: 0, specularIntensity: 0.18,
-      sheen: o.sheen ?? LOOK.sheen, sheenRoughness: 0.85, sheenColor: new THREE.Color(o.sheenColor ?? 0xbfd6fb)   // felt: matte, with a soft bright edge
+      color: 0xffffff, roughness: o.rough ?? LOOK.rough, metalness: 0, specularIntensity: LOOK.spec,
+      clearcoat: o.coat ?? LOOK.coat, clearcoatRoughness: LOOK.coatRough
     });
-    const face = !!o.face, grain = o.grain ?? 11, bump = o.bump ?? LOOK.bump;
-    const shared = o.uniforms || U.props;
+    const own = { uColA: { value: a.clone() }, uColB: { value: (b || a).clone() }, uLiftA: { value: liftOf(a) }, uLiftB: { value: liftOf(b || a) }, uSplit: { value: (o.split || [0, 0, -99, 0.01]).slice() }, uProfile: { value: o.profile ? 1 : 0 } };
+    m.userData.own = own; m.userData.fixed = o.rough != null;
+    const face = !!o.face;
     m.onBeforeCompile = (sh) => {
-      sh.uniforms.uGrain = { value: grain };
-      sh.uniforms.uBump = { value: bump };
-      Object.assign(sh.uniforms, shared);
+      Object.assign(sh.uniforms, U, own, face ? faceUni : {});
       sh.vertexShader = 'attribute float ao;\nvarying vec3 vObj;\nvarying float vAO;\n' +
         sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvObj = position;\nvAO = ao;');
-      let fs = CLAY + '\nuniform float uAoPow;\nuniform float uAoDirect;\nuniform float uSss;\nuniform float uFelt;\nuniform float uEdge;\n' +
-        (face ? 'uniform vec3 uBlushC;\nuniform float uBlushK;\nuniform vec3 uBlushP;\nuniform vec2 uBlushR;\nuniform vec3 uEyeA;\nuniform vec3 uEyeB;\nuniform vec3 uEyeS;\nuniform float uEyeK;\n' : '') + sh.fragmentShader;
-      m.userData.shader = sh;
-      if (face) {
-        sh.uniforms.uBlushC = { value: new THREE.Color(o.blush) };
-        sh.uniforms.uBlushK = { value: LOOK.blushK };
-        Object.assign(sh.uniforms, faceUni);
-        // blush: two soft-edged discs drawn on the cheeks (crisper than the per-vertex blush), and a faint shadow where
-        // each eye bead sits on the face
-        fs = fs.replace('#include <color_fragment>', '#include <color_fragment>\n' +
-          '  float bR = uBlushR.x * (0.94 + 0.06 * uBlushK);\n' +
-          '  float bm = max(1.0 - smoothstep(bR - uBlushR.y, bR + uBlushR.y, distance(vObj, uBlushP)), 1.0 - smoothstep(bR - uBlushR.y, bR + uBlushR.y, distance(vObj, uBlushP * vec3(-1.0, 1.0, 1.0))));\n' +
-          '  diffuseColor.rgb = mix(diffuseColor.rgb, uBlushC, bm * clamp(0.82 * uBlushK, 0.0, 1.0));\n' +
-          '  float eA = length((vObj - uEyeA) / uEyeS), eB = length((vObj - uEyeB) / uEyeS);\n' +
-          '  diffuseColor.rgb *= 1.0 - uEyeK * (1.0 - smoothstep(1.0, 1.32, min(eA, eB)));');
-      }
-      fs = fs.replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb *= 1.0 + uFelt * feltTone(vObj) * clamp(1.6 - length(fwidth(vObj)) * uGrain * 4.0, 0.0, 1.0);   // a little fibre-to-fibre variation, like felt');
-      fs = fs.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += diffuseColor.rgb * uSss * vAO;   // light passing through soft clay');
-      fs = fs.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n  normal = clayPerturb(-vViewPosition, normal, clayH(vObj), faceDirection);');
+      let fs = 'varying vec3 vObj;\nvarying float vAO;\nuniform float uAoPow, uAoDirect, uSss, uEdge, uProfile, uLift;\nuniform vec3 uColA, uColB, uLiftA, uLiftB;\nuniform vec4 uSplit;\n' +
+        (face ? 'uniform vec3 uEyeA, uEyeB, uEyeS;\nuniform float uEyeK;\n' : '') + sh.fragmentShader;
+      fs = fs.replace('#include <color_fragment>', '#include <color_fragment>\n' +
+        '  float sx = uSplit.x;\n' +
+        '  if (uProfile > 0.5) sx = mix(uSplit.x, uSplit.y, smoothstep(uSplit.z + uSplit.w, uSplit.z - uSplit.w, vObj.y) * smoothstep(0.05, 0.3, vObj.z));\n' +
+        '  float sd = vObj.x - sx, sw = fwidth(sd) * 0.8 + 1e-5;\n' +
+        '  float side = smoothstep(-sw, sw, sd);\n  diffuseColor.rgb = mix(uColA, uColB, side);\n  vec3 liftC = mix(uLiftA, uLiftB, side);\n' +
+        // a faint shadow where each eye bead sits on the face
+        (face ? '  float eA = length((vObj - uEyeA) / uEyeS), eB = length((vObj - uEyeB) / uEyeS);\n  diffuseColor.rgb *= 1.0 - uEyeK * (1.0 - smoothstep(1.0, 1.32, min(eA, eB)));\n' : ''));
+      // where the surface faces the big top-left light, the color lifts (the blue toward a light cyan, like the figure)
+      fs = fs.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n  diffuseColor.rgb = mix(diffuseColor.rgb, liftC, uLift * pow(max(dot(normal, normalize(vec3(-0.45, 0.75, 0.5))), 0.0), 3.0));');
+      fs = fs.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += diffuseColor.rgb * uSss * vAO;   // a little light through the vinyl');
       fs = fs.replace('#include <aomap_fragment>', '#include <aomap_fragment>\n  float occ = pow(vAO, uAoPow);\n  reflectedLight.indirectDiffuse *= occ;\n  reflectedLight.indirectSpecular *= occ;\n  reflectedLight.directDiffuse *= mix(1.0, occ, uAoDirect);\n' +
-        '  float rimK = 1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);\n  float dim = 1.0 - uEdge * rimK * rimK;   // surfaces turning away from you fall off a little, like the photo\n' +
+        '  float rimK = 1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);\n  float dim = 1.0 - uEdge * rimK * rimK;   // surfaces turning away from you fall off a little\n' +
         '  reflectedLight.directDiffuse *= dim;\n  reflectedLight.indirectDiffuse *= dim;');
       sh.fragmentShader = fs;
     };
-    m.customProgramCacheKey = () => (face ? 'my-face' : 'my-clay') + grain + '_' + bump;
+    m.customProgramCacheKey = () => (face ? 'my-vinyl-face' : 'my-vinyl');
+    mats.push(m);
     return m;
   };
   const C = data.colors;
@@ -185,43 +152,34 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
     }
     return idx;
   };
-  const hairIndex = (NM, M) => {
-    const idx = [], at = (j, k) => 1 + ((j + NM) % NM) * M + k;
-    for (let j = 0; j < NM; j++) {
-      idx.push(0, at(j, 0), at(j + 1, 0));
-      for (let k = 0; k < M - 1; k++) idx.push(at(j, k), at(j, k + 1), at(j + 1, k + 1), at(j, k), at(j + 1, k + 1), at(j + 1, k));
-    }
-    return idx;
-  };
   const geo = (m, index, off, aoKey) => {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(positions(m, off), 3));
     g.setAttribute('ao', new THREE.BufferAttribute(dec(aoKey || m.ao, Uint8Array), 1, true));
-    if (m.blush) g.setAttribute('blush', new THREE.BufferAttribute(dec(m.blush, Uint8Array), 1, true));
     g.setIndex(index);
     g.computeVertexNormals();
     return g;
   };
   const R = data.rig;
-  const NECK = R.neck, HC = R.headCenter, BB = R.bunBase;
+  const NECK = R.neck, HC = R.headCenter, BB = R.bowBase, SPLIT = data.split;
 
   // ---------- the rig ----------
   const root = new THREE.Group();          // hop, spin, lean (pivot at the feet)
   const squash = new THREE.Group();        // breathing and squash, volume kept
   root.add(squash);
   scene.add(root);
-  const blueColor = () => (LOOK.blue ? rgb(LOOK.blue) : rgb(C.blue).multiplyScalar(0.9));
-  const sheenOf = (c, k) => new THREE.Color(1, 1, 1).lerp(c, 1 - k);   // sheenTint 0: white edge, 1: the surface's own color
-  const blue = clay(blueColor(), { uniforms: U.clay });
-  blue.sheenColor.copy(sheenOf(blueColor(), LOOK.sheenTint));
-  squash.add(new THREE.Mesh(geo(data.body, Array.from(dec(data.body.idx, Uint16Array))), blue));
+  // the Finder colors: the head is blue on your left and white on your right, the body the other way round
+  const BLUE = () => rgb(LOOK.blue || C.blue), WHITE = () => rgb(LOOK.white || C.white);
+  const bodyMat = vinyl(WHITE(), BLUE());
+  squash.add(new THREE.Mesh(geo(data.body, Array.from(dec(data.body.idx, Uint16Array))), bodyMat));
 
   // arms: the exported mitten, skinned to a shoulder bone and an elbow bone so a wave bends it softly
+  const armMats = [vinyl(WHITE()), vinyl(BLUE())];
   const makeArm = (s) => {
     const g = geo(data.arm, loftIndex(data.arm.rings), null, s < 0 ? data.arm.ao : data.arm.aoR);
     const pos = g.attributes.position, idx = [], wts = [];
     for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i), we = sstep(-0.22, -0.4, y), ww = sstep(-0.42, -0.52, y);   // shoulder, elbow, wrist
+      const y = pos.getY(i), we = sstep(-0.26, -0.46, y), ww = sstep(-0.49, -0.6, y);   // shoulder, elbow, wrist
       idx.push(0, 1, 2, 0); wts.push(1 - we, we * (1 - ww), we * ww, 0);
     }
     g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(idx, 4));
@@ -229,10 +187,10 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
     const shoulder = new THREE.Group();
     shoulder.position.fromArray(s < 0 ? R.shoulderL : R.shoulderR);
     const b0 = new THREE.Bone(), b1 = new THREE.Bone(), b2 = new THREE.Bone();
-    b1.position.y = -0.31;
-    b2.position.y = -0.16;
+    b1.position.y = -0.36;
+    b2.position.y = -0.18;
     b0.add(b1); b1.add(b2);
-    const mesh = new THREE.SkinnedMesh(g, blue);
+    const mesh = new THREE.SkinnedMesh(g, armMats[s < 0 ? 0 : 1]);
     mesh.add(b0);
     mesh.bind(new THREE.Skeleton([b0, b1, b2]));
     mesh.frustumCulled = false;
@@ -243,29 +201,23 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
   const armL = makeArm(-1), armR = makeArm(1);
   const ARM_TILT = (R.armTilt * Math.PI) / 180;
 
-  // head: pivots at the neck; hair, bun and face ride along
+  // head: pivots at the neck; the bow and the face ride along
   const neck = new THREE.Group();
   neck.position.fromArray(NECK);
   squash.add(neck);
   const head = new THREE.Group();
   neck.add(head);
-  const headMat = clay(LOOK.cream ? rgb(LOOK.cream) : rgb(C.cream), { face: true, blush: LOOK.pink ? rgb(LOOK.pink) : rgb(C.pink), rough: LOOK.roughFace, sheen: LOOK.sheenFace, sheenColor: 0xfff3ea, bump: LOOK.bumpFace, uniforms: U.face });
+  const headMat = vinyl(BLUE(), WHITE(), { face: true, profile: true, split: [SPLIT.top, SPLIT.low, SPLIT.step - NECK[1], 0.012] });
   const headGeo = geo(data.head, loftIndex(data.head.rings), NECK);
   head.add(new THREE.Mesh(headGeo, headMat));
-  {   // the drawn blush sits where Blender painted it: the blush-weighted center of the right cheek
-    const pos = headGeo.attributes.position, bl = headGeo.attributes.blush;
-    const c = new THREE.Vector3(); let wsum = 0;
-    if (bl) for (let i = 0; i < pos.count; i++) { const w = bl.getX(i); if (w > 0.05 && pos.getX(i) > 0) { c.x += pos.getX(i) * w; c.y += pos.getY(i) * w; c.z += pos.getZ(i) * w; wsum += w; } }
-    if (wsum) faceUni.uBlushP.value.copy(c.multiplyScalar(1 / wsum));
-    const e = data.eyes[1].s; faceUni.uEyeS.value.set(e[0] * LOOK.eyeW, e[1], e[0] * LOOK.eyeW);
-    faceUni.uBlushP.value.y += LOOK.blushUp;
-  }
-  head.add(new THREE.Mesh(geo(data.hair, hairIndex(data.hair.hair[0], data.hair.hair[1]), NECK), blue));
-  const bunPivot = new THREE.Group();
-  bunPivot.position.set(BB[0] - NECK[0], BB[1] - NECK[1], BB[2] - NECK[2]);
-  head.add(bunPivot);
-  const bun = new THREE.Mesh(geo(data.bun, loftIndex(data.bun.rings), BB), blue);
-  bunPivot.add(bun);
+  { const e = data.eyes[1].s; faceUni.uEyeS.value.set(e[0] * LOOK.eyeW, e[1], e[0] * LOOK.eyeW); }
+  // the bow pivots where it sits on the head, so it can lag behind the head's moves
+  const bowPivot = new THREE.Group();
+  bowPivot.position.set(BB[0] - NECK[0], BB[1] - NECK[1], BB[2] - NECK[2]);
+  head.add(bowPivot);
+  const bowMat = vinyl(LOOK.bow ? rgb(LOOK.bow) : BLUE());
+  const bow = new THREE.Mesh(geo(data.bow, Array.from(dec(data.bow.idx, Uint16Array)), BB), bowMat);
+  bowPivot.add(bow);
 
   // face: the features ride in a pivot at the head center so the gaze can slide them across the surface
   const gaze = new THREE.Group();
@@ -287,7 +239,7 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
     const g1 = new THREE.Mesh(new THREE.SphereGeometry(e.glintR, 20, 14), glintMat);
     g1.position.copy(gl);
     g1.scale.setScalar(LOOK.glint);
-    lid.add(g1);   // one soft highlight, like the reference; the glossy bead reflects the rest
+    lid.add(g1);   // one small highlight; the glossy bead reflects the rest
     // happy eyes: a soft arch the oval closes into
     const w = e.s[0] * 0.92 * LOOK.eyeW, arcPts = [];
     for (let i = 0; i <= 14; i++) { const u = i / 14 * 2 - 1; arcPts.push(new THREE.Vector3(u * w, e.s[1] * (0.25 - 0.5 * u * u), e.s[2] * 0.7)); }
@@ -298,14 +250,31 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
       holder.add(g);
       return g;
     };
-    const arc = line(arcPts, 0.019);
+    const arc = line(arcPts, 0.014);
     // asleep: the arch turns over into a soft "u"
     const sleepPts = arcPts.map((q) => new THREE.Vector3(q.x, -q.y - e.s[1] * 0.1, q.z));
-    const sleepArc = line(sleepPts, 0.017);
+    const sleepArc = line(sleepPts, 0.013);
+    // lashes: two little flicks at the outer corner, on the open eye and on both closed shapes
+    const out = Math.sign(e.p[0] - HC[0]) || 1, rx = e.s[0] * LOOK.eyeW, ry = e.s[1];
+    const lash = (parent, x, y, z, dx, dy, len) => {
+      const d = new THREE.Vector2(dx, dy).normalize(), L = len * LOOK.lash, r = 0.0085;
+      const pts = [new THREE.Vector3(x, y, z), new THREE.Vector3(x + d.x * L * 0.55, y + d.y * L * 0.55, z), new THREE.Vector3(x + d.x * L + out * 0.1 * L, y + d.y * L + 0.22 * L, z)];
+      const g = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 8, r, 8, false), lineMat);
+      const tip = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 6), lineMat); tip.position.copy(pts[2]); g.add(tip);
+      parent.add(g);
+    };
+    [[42, 0.058], [72, 0.046]].forEach(([deg, len]) => {   // out from the rim, tipped up a little
+      const a = deg * Math.PI / 180, nx = out * Math.sin(a) / rx, ny = Math.cos(a) / ry;
+      lash(lid, out * rx * Math.sin(a), ry * Math.cos(a), 0.013, nx, ny + 0.6 * Math.hypot(nx, ny), len);
+    });
+    lash(arc, out * w * 0.9, ry * (0.25 - 0.5 * 0.81), e.s[2] * 0.7, out * 0.9, 0.45, 0.052);
+    lash(arc, out * w * 0.62, ry * (0.25 - 0.5 * 0.384), e.s[2] * 0.7, out * 0.55, 0.85, 0.044);
+    lash(sleepArc, out * w * 0.9, ry * (0.5 * 0.81 - 0.35), e.s[2] * 0.7, out * 0.75, -0.65, 0.05);
+    lash(sleepArc, out * w * 0.6, ry * (0.5 * 0.36 - 0.35), e.s[2] * 0.7, out * 0.3, -0.95, 0.042);
     // dizzy: a spiral where the eye was
     const spiralPts = [];
-    for (let i = 0; i <= 64; i++) { const a = i / 64 * Math.PI * 5.2, r = 0.012 + (i / 64) * e.s[0] * 0.95 * LOOK.eyeW; spiralPts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r * 1.15, e.s[2] * 0.72)); }
-    const spiral = line(spiralPts, 0.014);
+    for (let i = 0; i <= 64; i++) { const a = i / 64 * Math.PI * 5.2, r = 0.008 + (i / 64) * e.s[0] * 1.15 * LOOK.eyeW; spiralPts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r * 1.15, e.s[2] * 0.72)); }
+    const spiral = line(spiralPts, 0.01);
     gaze.add(holder);
     return { holder, lid, glints: [g1], arc, sleepArc, spiral };
   };
@@ -313,7 +282,7 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
   const smile = new THREE.Group();
   {
     const S0 = data.smile.pts, mid = S0[(S0.length - 1) >> 1];
-    const P0 = S0.map((p) => [mid[0] + (p[0] - mid[0]) * LOOK.mouthW, p[1], p[2] + 0.003]);   // shorter and a touch deeper, like the reference
+    const P0 = S0.map((p) => [mid[0] + (p[0] - mid[0]) * LOOK.mouthW, p[1], p[2] + 0.003]);   // LOOK.mouthW scales its width
     smile.position.set(mid[0] - NECK[0], mid[1] - NECK[1], mid[2] - NECK[2]);
     const pts = P0.map((p) => new THREE.Vector3(p[0] - mid[0], p[1] - mid[1], p[2] - mid[2]));
     smile.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, LOOK.mouthR, 12, false), lineMat));
@@ -392,8 +361,8 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
   };
   setDark(!!opts.dark);
 
-  // ---------- props: small clay things that belong to a page ----------
-  const tint = (hex, o) => clay(new THREE.Color(hex), Object.assign({ sheen: 0.3, sheenColor: 0xffffff, grain: 14 }, o));
+  // ---------- props: small things that belong to a page ----------
+  const tint = (hex, o) => vinyl(new THREE.Color(hex), null, o);
   const lit = (geom) => { geom.setAttribute('ao', new THREE.BufferAttribute(new Uint8Array(geom.attributes.position.count).fill(235), 1, true)); return geom; };
   const plain = (geom, hex, o) => new THREE.Mesh(lit(geom), tint(hex, o));
   const labelTex = (w, h, draw) => {
@@ -434,7 +403,7 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
       screen.position.set(0, 0.3, 0.001);
       lid.add(shell, screen);
       g.add(base, keys, lid);
-      g.position.set(-1.0, 0, 0.32);
+      g.position.set(-1.2, 0, 0.4);
       g.rotation.y = 0.6;
       g.scale.setScalar(1.05);
       scene.add(g);
@@ -446,15 +415,15 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
       [-1, 1].forEach((s) => {
         const shoe = new THREE.Group();
         const sole = plain(new THREE.CylinderGeometry(1, 1, 1, 40), 0xfbfaf6, { rough: 0.7 });
-        sole.scale.set(0.265, 0.07, 0.37); sole.position.set(0, 0.035, 0.03);
+        sole.scale.set(0.31, 0.07, 0.53); sole.position.set(0, 0.035, 0.03);
         const upper = plain(new THREE.SphereGeometry(1, 40, 24, 0, Math.PI * 2, 0, Math.PI / 2), 0xd8e85a);
-        upper.scale.set(0.255, 0.22, 0.355); upper.position.set(0, 0.06, 0.03);
+        upper.scale.set(0.3, 0.27, 0.515); upper.position.set(0, 0.06, 0.03);
         const stripe = plain(new THREE.TorusGeometry(1, 0.06, 8, 40, Math.PI * 0.9), 0xffffff);
-        stripe.scale.set(0.262, 0.12, 0.29); stripe.position.set(0, 0.085, 0.01);
+        stripe.scale.set(0.307, 0.12, 0.42); stripe.position.set(0, 0.085, 0.01);
         const lace = plain(new THREE.TorusGeometry(0.055, 0.018, 8, 20), 0xf4a6b6);
-        lace.position.set(0, 0.255, 0.16); lace.rotation.x = -0.9;
+        lace.position.set(0, 0.3, 0.27); lace.rotation.x = -0.9;
         shoe.add(sole, upper, stripe, lace);
-        shoe.position.set(s * 0.245, 0, 0.0);
+        shoe.position.set(s * 0.33, 0, 0.0);
         shoe.rotation.y = s * 0.08;
         g.add(shoe);
       });
@@ -484,7 +453,7 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
         panel.rotation.y = (1 - i) * 0.3;
         g.add(panel);
       }
-      const o = opts.mapAt || [0, 0.66, 0.6, -0.35, 0, 0.1];
+      const o = opts.mapAt || [0, 0.86, 0.78, -0.35, 0, 0.1];
       g.position.set(o[0], o[1], o[2]);
       g.rotation.set(o[3], o[4], o[5]);
       squash.add(g);
@@ -499,8 +468,8 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
         x.fillStyle = '#888'; [24, w - 24].forEach((cx) => { x.beginPath(); x.arc(cx, 17, 6, 0, 7); x.fill(); });
       });
       const g = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.3, 32, 1, true, -0.62, 1.24), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85, side: THREE.DoubleSide }));
-      g.position.set(0, 0.66, -0.04);
-      g.scale.set(0.53, 1, 0.405);
+      g.position.set(0, 0.8, 0);
+      g.scale.set(0.78, 1, 0.65);
       squash.add(g);
       return g;
     },
@@ -516,16 +485,16 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
       return hand(g, [0, -0.13, 0], [0.05, 0.02, 0]);
     },
     visor: () => {
-      // a mixed reality headset: a band over the hair and a tinted visor in front of the eyes
+      // a mixed reality headset: a band around the head and a tinted visor in front of the eyes
       const g = new THREE.Group();
       const band = plain(new THREE.TorusGeometry(1, 0.055, 10, 72), 0xf1f3f6, { rough: 0.45 });
-      band.scale.set(0.99, 0.89, 1); band.rotation.x = Math.PI / 2 + 0.12; band.position.set(0, 2.1, -0.01);
+      band.scale.set(0.995, 0.9, 1); band.rotation.x = Math.PI / 2 + 0.08; band.position.set(0, 2.4, -0.01);
       const lens = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.42, 48, 1, true, -1.05, 2.1), new THREE.MeshPhysicalMaterial({
         color: 0x7fc1ff, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.38, clearcoat: 1, clearcoatRoughness: 0.05, side: THREE.DoubleSide, depthWrite: false
       }));
-      lens.scale.set(1.0, 1, 0.94); lens.position.set(0, 1.8, 0);
+      lens.scale.set(1.03, 0.9, 0.93); lens.position.set(0, 2.26, 0);
       const brow = plain(new THREE.CylinderGeometry(1, 1, 0.09, 48, 1, true, -1.1, 2.2), 0xf1f3f6, { rough: 0.45 });
-      brow.scale.set(1.02, 1, 0.96); brow.position.set(0, 2.02, 0);
+      brow.scale.set(1.04, 1, 0.94); brow.position.set(0, 2.45, 0);
       g.add(band, lens, brow);
       g.position.set(-NECK[0], -NECK[1], -NECK[2]);
       head.add(g);
@@ -562,7 +531,7 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
       const em = new THREE.Mesh(new THREE.ExtrudeGeometry(star, { depth: 0.02, bevelEnabled: true, bevelSize: 0.012, bevelThickness: 0.01, bevelSegments: 2 }), gold);
       em.position.z = 0.03;
       g.add(disc, ring, em);
-      g.position.set(0, 0.62, 0.48);
+      g.position.set(0, 0.78, 0.64);
       g.rotation.set(-0.1, 0, 0);
       squash.add(g);
       return g;
@@ -775,7 +744,7 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
   // where the pointer is, as yaw/pitch from Mini Yaz's head (screen space, so it works anywhere on the page)
   const attention = () => {
     const r = host.getBoundingClientRect();
-    const hx = r.left + r.width * 0.5, hy = r.top + r.height * 0.38;
+    const hx = r.left + r.width * 0.5, hy = r.top + r.height * 0.31;
     // something on the page asked for a look (keyboard focus, a reaction); otherwise the pointer
     const target = m.focus && m.t < m.focus.until ? m.focus : (m.ptr && m.t - m.ptr.t < 4000 ? m.ptr : null);
     if (!target) return null;
@@ -903,7 +872,7 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
     worst = -1;
     for (const [bone, y] of [[arm.elbow, -0.1], [arm.wrist, -0.04], [arm.wrist, -0.17]]) {
       gv.set(0, y, 0); bone.localToWorld(gv); gv.sub(gc).applyQuaternion(gq);
-      const e = (gv.x / 1.16) ** 2 + (gv.y / 1.05) ** 2 + (gv.z / 1.03) ** 2;
+      const e = (gv.x / 1.14) ** 2 + (gv.y / 0.95) ** 2 + (gv.z / 1.04) ** 2;
       worst = Math.max(worst, 1 - Math.sqrt(e));
     }
     return worst;
@@ -967,15 +936,12 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
     smile.scale.set(1 + 0.15 * joy, 1 + 0.9 * joy, 1);
     setMouth(P.mouth);
     smile.visible = P.mouth < 0.45;
-    if (headMat.userData.shader) headMat.userData.shader.uniforms.uBlushK.value = LOOK.blushK * (1 + 0.35 * joy);
-    // follow-through: the bun reads the head about 110 ms late
+    // follow-through: the bow reads the head about 110 ms late
     m.hist.push({ t: m.t, roll: P.hRoll, pitch: P.hPitch, y: P.y, sy: P.sy, yaw: P.yaw + P.hYaw });
     while (m.hist.length > 2 && m.hist[0].t < m.t - 400) m.hist.shift();
     const lagRoll = past('roll', 110) - P.hRoll, lagPitch = past('pitch', 110) - P.hPitch;
     const lagY = past('y', 100) - P.y, lagYaw = past('yaw', 120) - (P.yaw + P.hYaw);
-    bunPivot.rotation.set(clamp(0.6 * lagPitch - 0.45 * lagY, -0.35, 0.35), clamp(0.25 * lagYaw, -0.3, 0.3), clamp(0.6 * lagRoll + 0.15 * lagYaw, -0.3, 0.3));
-    const bs = 1 + clamp(0.5 * (past('sy', 90) - P.sy), -0.08, 0.08);
-    bun.scale.set(Math.pow(bs, -0.5), bs, Math.pow(bs, -0.5));
+    bowPivot.rotation.set(clamp(0.5 * lagPitch - 0.4 * lagY, -0.3, 0.3), clamp(0.25 * lagYaw, -0.25, 0.25), clamp(0.5 * lagRoll + 0.15 * lagYaw, -0.25, 0.25));
     const air = clamp(P.y / 0.45, 0, 1);
     blob.scale.set((1 - 0.4 * air) * sx, 1 - 0.3 * air, 1);
     blob.material.opacity = (blob.userData.base ?? 0.32) * (1 - 0.55 * air);
@@ -1124,15 +1090,15 @@ vec3 clayPerturb(vec3 sp, vec3 sn, float h, float fd) {
       renderer.toneMappingExposure = LOOK.exposure;
       scene.environmentIntensity = LOOK.env;
       key.intensity = LOOK.key; key.position.set(LOOK.keyX, LOOK.keyY, LOOK.keyZ); hemi.intensity = LOOK.hemi;
-      blue.color.copy(blueColor()); blue.roughness = LOOK.rough; blue.sheen = LOOK.sheen; blue.sheenColor.copy(sheenOf(blueColor(), LOOK.sheenTint));
-      headMat.color.copy(LOOK.cream ? rgb(LOOK.cream) : rgb(C.cream)); headMat.roughness = LOOK.roughFace; headMat.sheen = LOOK.sheenFace;
-      [[U.clay, false], [U.props, false], [U.face, true]].forEach(([u, f]) => {
-        u.uAoPow.value = f && LOOK.aoPowFace != null ? LOOK.aoPowFace : LOOK.aoPow; u.uAoDirect.value = LOOK.aoDirect; u.uSss.value = f ? LOOK.sssFace : LOOK.sss; u.uFelt.value = LOOK.felt; u.uEdge.value = f ? LOOK.edgeFace : LOOK.edge;
-      });
-      const bs = blue.userData.shader, hs = headMat.userData.shader;
-      if (bs) bs.uniforms.uBump.value = LOOK.bump;
-      if (hs) { hs.uniforms.uBump.value = LOOK.bumpFace; hs.uniforms.uBlushK.value = LOOK.blushK; hs.uniforms.uBlushC.value.copy(LOOK.pink ? rgb(LOOK.pink) : rgb(C.pink)); }
-      faceUni.uBlushR.value.set(LOOK.blushR, LOOK.blushSoft); inkMat.envMapIntensity = LOOK.eyeGloss;
+      bodyMat.userData.own.uColA.value.copy(WHITE()); bodyMat.userData.own.uColB.value.copy(BLUE());
+      headMat.userData.own.uColA.value.copy(BLUE()); headMat.userData.own.uColB.value.copy(WHITE());
+      armMats[0].userData.own.uColA.value.copy(WHITE()); armMats[0].userData.own.uColB.value.copy(WHITE());
+      armMats[1].userData.own.uColA.value.copy(BLUE()); armMats[1].userData.own.uColB.value.copy(BLUE());
+      const bc = LOOK.bow ? rgb(LOOK.bow) : BLUE(); bowMat.userData.own.uColA.value.copy(bc); bowMat.userData.own.uColB.value.copy(bc);
+      mats.forEach((mt) => { if (!mt.userData.fixed) mt.roughness = LOOK.rough; mt.specularIntensity = LOOK.spec; mt.clearcoat = LOOK.coat; mt.clearcoatRoughness = LOOK.coatRough; });
+      U.uAoPow.value = LOOK.aoPow; U.uAoDirect.value = LOOK.aoDirect; U.uSss.value = LOOK.sss; U.uEdge.value = LOOK.edge; U.uLift.value = LOOK.lift;
+      mats.forEach((mt) => { const o = mt.userData.own; o.uLiftA.value.copy(liftOf(o.uColA.value)); o.uLiftB.value.copy(liftOf(o.uColB.value)); });
+      inkMat.envMapIntensity = LOOK.eyeGloss;
       render();
     },
     look: () => Object.assign({}, LOOK),

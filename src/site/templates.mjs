@@ -79,7 +79,7 @@ ${noindex ? '<meta name="robots" content="noindex">' : `<link rel="canonical" hr
 <meta property="og:image" content="${ogImage}">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Mini Yaz, a little blue clay version of Yasmeen, waving beside the name Yasmeen Roumie">
+<meta property="og:image:alt" content="Mini Yaz, a little blue and white vinyl version of Yasmeen, waving beside the name Yasmeen Roumie">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(description)}">

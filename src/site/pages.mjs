@@ -11,7 +11,7 @@ function home() {
 <section class="hero" aria-labelledby="name">
   <div class="wrap">
     <h1 class="hero-name" id="name">${site.name}</h1>
-    <div class="hero-mascot">${mascot({ pose: 'wave', label: 'Mini Yaz, a little clay me, waving hello', main: true })}</div>
+    <div class="hero-mascot">${mascot({ pose: 'wave', label: 'Mini Yaz, a little vinyl me, waving hello', main: true })}</div>
     ${hint('Tap Mini Yaz to say hi, or drag to spin')}
     <div class="hero-title"><span>${site.title}.</span> <span>${site.tagline}</span></div>
     <p class="hero-body">${site.summary}</p>
@@ -248,7 +248,7 @@ function aboutPage() {
     <div class="window-bar"><span class="lights" aria-hidden="true"><span></span><span></span><span></span></span><span class="title">About Yasmeen</span></div>
     <div class="about-body pinstripe">
       <div class="about-head">
-        <div class="mascot-slot">${mascot({ pose: 'spin', label: 'Mini Yaz, a little clay version of Yasmeen', main: true })}</div>
+        <div class="mascot-slot">${mascot({ pose: 'spin', label: 'Mini Yaz, a little vinyl version of Yasmeen', main: true })}</div>
         ${hint('Tap or drag Mini Yaz to spin')}
         <h1 id="bio-h">${site.name}</h1>
         <p>${site.title} · ${site.location}</p>
